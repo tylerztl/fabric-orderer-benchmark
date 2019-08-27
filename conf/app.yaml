@@ -1,0 +1,14 @@
+---
+
+application:
+  logPath: logs
+  logLevel: 7
+  # [admin/default Optional]. Used by create/join/update channel for admin client.
+  org:
+    - name: org1
+      admin: Admin
+      user: User1
+      default: true
+
+  # [Optional]. Used by create/join/update channel.
+  ordererEndpoint: orderer.example.com

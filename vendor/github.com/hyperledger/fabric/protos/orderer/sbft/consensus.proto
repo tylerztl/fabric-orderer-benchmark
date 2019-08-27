@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package backend;
+
+option go_package = "github.com/hyperledger/fabric/protos/orderer/sbft";
+
+import "orderer/sbft/simplebft.proto";
+
+service consensus {
+    rpc consensus(handshake) returns (stream simplebft.MultiChainMsg) {}
+}
+
+message handshake {
+}

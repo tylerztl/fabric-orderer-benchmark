@@ -1,0 +1,33 @@
+/*
+Copyright zhigui Corp. All Rights Reserved.
+
+SPDX-License-Identifier: Apache-2.0
+*/
+
+syntax = "proto3";
+
+option java_package = "org.fabric-orderer-benchmark.protos";
+option go_package = "fabric-orderer-benchmark/protos";
+
+package protos;
+
+import "common.proto";
+
+// Interface exported by the server.
+service Channel {
+    rpc CreateChannel (CreateChannelRequest) returns (CreateChannelResponse) {}
+    rpc JoinChannel (JoinChannelRequest) returns (ServerStatus) {}
+}
+
+message CreateChannelRequest {
+    string channel_id = 1;
+}
+
+message CreateChannelResponse {
+    StatusCode status = 1;
+    string transaction_id = 2;
+}
+
+message JoinChannelRequest {
+    string channel_id = 1;
+}
