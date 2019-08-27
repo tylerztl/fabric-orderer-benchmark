@@ -3,6 +3,7 @@ package ote
 import (
 	"fmt"
 	"math/rand"
+	"os"
 	"path/filepath"
 	"time"
 
@@ -42,13 +43,20 @@ type OrdererTrafficEngine struct {
 }
 
 func NewOTE() *OrdererTrafficEngine {
+	_ = os.Setenv("FABRIC_CFG_PATH", helpers.GetSampleConfigPath())
+	defer func() {
+		_ = os.Unsetenv("FABRIC_CFG_PATH")
+	}()
+
 	// Establish the default configuration from yaml files - and this also
 	// picks up any variables overridden on command line or in environment
 	ordConf, err := ordererConf.Load()
 	if err != nil {
 		panic(" Cannot Load orderer config data: " + err.Error())
 	}
-	genConf := genesisconfig.Load("TwoOrgsOrdererGenesis")
+
+	// notice: lower case
+	genConf := genesisconfig.Load("twoorgsorderergenesis")
 	return &OrdererTrafficEngine{
 		ordConf,
 		genConf,
@@ -56,7 +64,7 @@ func NewOTE() *OrdererTrafficEngine {
 	}
 }
 
-func (e *OrdererTrafficEngine) StartProducer(serverAddr string, chanID string, ordererIndex int, channelIndex int, payload int) {
+func (e *OrdererTrafficEngine) StartProducer(serverAddr string, chanID string, payload int) {
 	signer := localmsp.NewSigner()
 	ordererName := "orderer.example.com"
 	fpath := helpers.GetCryptoConfigPath(fmt.Sprintf("ordererOrganizations/example.com/orderers/%s"+"*", ordererName))
@@ -72,6 +80,11 @@ func (e *OrdererTrafficEngine) StartProducer(serverAddr string, chanID string, o
 	if e.tlsEnabled {
 		if len(matches) > 0 {
 			e.ordConf.General.BCCSP.SwOpts.FileKeystore.KeyStorePath = fmt.Sprintf("%s/msp/keystore", matches[0])
+			err = mspmgmt.LoadLocalMsp(fmt.Sprintf("%s/msp", matches[0]), e.ordConf.General.BCCSP, "OrdererMSP")
+			if err != nil { // Handle errors reading the config file
+				panic(fmt.Sprintf("Failed to initialize local MSP on chan %s: %s", chanID, err))
+			}
+
 			creds, err1 := credentials.NewClientTLSFromFile(fmt.Sprintf("%s/tls/ca.crt", matches[0]), fmt.Sprintf("%s", ordererName))
 			conn, err1 = grpc.Dial(serverAddr, grpc.WithTransportCredentials(creds))
 			if err1 != nil {
@@ -92,11 +105,11 @@ func (e *OrdererTrafficEngine) StartProducer(serverAddr string, chanID string, o
 
 	client, err := ab.NewAtomicBroadcastClient(conn).Broadcast(context.TODO())
 	if err != nil {
-		panic(fmt.Sprintf("Error creating Producer for ord[%d] ch[%d], err: %v", ordererIndex, channelIndex, err))
+		panic(fmt.Sprintf("Error creating Producer for ord[%s] , err: %v", ordererName, err))
 	}
 	time.Sleep(3 * time.Second)
 
-	logger.Info("Starting Producer to send TXs to ord[%d] ch[%d] srvr=%s chID=%s, %v", ordererIndex, channelIndex, serverAddr, chanID, time.Now())
+	logger.Info("Starting Producer to send TXs to ord[%s] srvr=%s chID=%s, %v", ordererName, serverAddr, chanID, time.Now())
 
 	b := NewBroadcastClient(client, chanID, signer)
 	time.Sleep(2 * time.Second)

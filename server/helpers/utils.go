@@ -30,5 +30,9 @@ func GetDeployPath() string {
 }
 
 func GetCryptoConfigPath(filename string) string {
-	return path.Join(goPath(), "src", Project, CryptoConfigPath, filename)
+	return path.Join(goPath(), "src", Project, "sampleconfig/crypto-config", filename)
+}
+
+func GetSampleConfigPath() string {
+	return path.Join(goPath(), "src", Project, "sampleconfig")
 }

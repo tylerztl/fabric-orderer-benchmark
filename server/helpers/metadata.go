@@ -10,9 +10,6 @@ package helpers
 // ChannelConfigPath is the relative path to the generated channel artifacts directory
 var ChannelConfigPath = "artifacts/channel"
 
-// CryptoConfigPath is the relative path to the generated crypto config directory
-var CryptoConfigPath = "artifacts/channel/crypto-config"
-
 // Project is the Go project name relative to the Go Path
 var Project = "fabric-orderer-benchmark"
 
