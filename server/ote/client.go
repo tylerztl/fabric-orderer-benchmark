@@ -1,7 +1,6 @@
 package ote
 
 import (
-	"fabric-orderer-benchmark/server/helpers"
 	"fmt"
 	"math"
 	"strings"
@@ -11,8 +10,6 @@ import (
 	ab "github.com/hyperledger/fabric/protos/orderer"
 	"github.com/hyperledger/fabric/protos/utils"
 )
-
-var logger = helpers.GetLogger()
 
 var (
 	oldest  = &ab.SeekPosition{Type: &ab.SeekPosition_Oldest{Oldest: &ab.SeekOldest{}}}

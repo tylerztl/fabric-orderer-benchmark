@@ -22,8 +22,10 @@ func sendTransaction() (pb.StatusCode, error) {
 }
 
 func TestSendTransaction(t *testing.T) {
-	status, err := sendTransaction()
-	if status != pb.StatusCode_SUCCESS || err != nil {
-		t.Error("Send transaction failed")
+	for i := 0; i < 10; i++ {
+		status, err := sendTransaction()
+		if status != pb.StatusCode_SUCCESS || err != nil {
+			t.Error("Send transaction failed")
+		}
 	}
 }

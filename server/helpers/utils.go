@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 )
 
+var Project = "fabric-orderer-benchmark"
+
 // goPath returns the current GOPATH. If the system
 // has multiple GOPATHs then the first is used.
 func goPath() string {
@@ -18,15 +20,6 @@ func goPath() string {
 func GetConfigPath(filename string) string {
 	const configPath = "conf"
 	return path.Join(goPath(), "src", Project, configPath, filename)
-}
-
-func GetChannelConfigPath(filename string) string {
-	return path.Join(goPath(), "src", Project, ChannelConfigPath, filename)
-}
-
-func GetDeployPath() string {
-	const ccPath = "conf"
-	return path.Join(goPath(), "src", Project, ccPath)
 }
 
 func GetCryptoConfigPath(filename string) string {

@@ -12,17 +12,18 @@ type AppConf struct {
 }
 
 type Application struct {
-	LogPath         string     `yaml:"logPath"`
-	LogLevel        int8       `yaml:"logLevel"`
-	OrgInfo         []*OrgInfo `yaml:"org"`
-	OrdererEndpoint string     `yaml:"ordererEndpoint"`
+	LogPath      string         `yaml:"logPath"`
+	LogLevel     int8           `yaml:"logLevel"`
+	ConnOrderers []*OrdererInfo `yaml:"orderers"`
+	OrdererMsp   string         `yaml:"ordererMsp"`
+	Profile      string         `yaml:"profile"`
+	TlsEnabled   bool           `yaml:"tlsEnabled"`
 }
 
-type OrgInfo struct {
-	Name    string `yaml:"name"`
-	Admin   string `yaml:"admin"`
-	User    string `yaml:"user"`
-	Default bool   `yaml:"default"`
+type OrdererInfo struct {
+	Name string `yaml:"name"`
+	Host string `yaml:"host"`
+	Port uint16 `yaml:"port"`
 }
 
 var appConfig = new(AppConf)

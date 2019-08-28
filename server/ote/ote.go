@@ -1,12 +1,14 @@
 package ote
 
 import (
+	"fabric-orderer-benchmark/server/helpers"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
-	"fabric-orderer-benchmark/server/helpers"
+	"github.com/hyperledger/fabric/common/crypto"
 	"github.com/hyperledger/fabric/common/localmsp"
 	genesisconfig "github.com/hyperledger/fabric/common/tools/configtxgen/localconfig" // config for genesis.yaml
 	mspmgmt "github.com/hyperledger/fabric/msp/mgmt"
@@ -17,10 +19,13 @@ import (
 	"google.golang.org/grpc/credentials"
 )
 
+var logger = helpers.GetLogger()
+var appConf = helpers.GetAppConf().Conf
+
 type OrdererTrafficEngine struct {
-	ordConf    *ordererConf.TopLevel
-	genConf    *genesisconfig.Profile
-	tlsEnabled bool
+	ordConf *ordererConf.TopLevel
+	genConf *genesisconfig.Profile
+	signer  crypto.LocalSigner
 }
 
 func NewOTE() *OrdererTrafficEngine {
@@ -36,17 +41,33 @@ func NewOTE() *OrdererTrafficEngine {
 		panic(" Cannot Load orderer config data: " + err.Error())
 	}
 
-	// notice: lower case
-	genConf := genesisconfig.Load("twoorgsorderergenesis")
+	genConf := genesisconfig.Load(strings.ToLower(appConf.Profile))
+
+	if len(appConf.ConnOrderers) == 0 {
+		panic(" Cannot find connect orderers config")
+	}
+	fpath := helpers.GetCryptoConfigPath(fmt.Sprintf("ordererOrganizations/example.com/orderers/%s"+"*", appConf.ConnOrderers[0].Host))
+	matches, err := filepath.Glob(fpath)
+	if err != nil {
+		panic(fmt.Sprintf("Cannot find filepath %s ; err: %v\n", fpath, err))
+	} else if len(matches) != 1 {
+		panic(fmt.Sprintf("No msp directory filepath name matches: %s\n", fpath))
+	}
+	ordConf.General.BCCSP.SwOpts.FileKeystore.KeyStorePath = fmt.Sprintf("%s/msp/keystore", matches[0])
+	err = mspmgmt.LoadLocalMsp(fmt.Sprintf("%s/msp", matches[0]), ordConf.General.BCCSP, appConf.OrdererMsp)
+	if err != nil { // Handle errors reading the config file
+		panic(fmt.Sprintf("Failed to initialize local MSP: %v", err))
+	}
+	signer := localmsp.NewSigner()
+
 	return &OrdererTrafficEngine{
 		ordConf,
 		genConf,
-		true,
+		signer,
 	}
 }
 
 func (e *OrdererTrafficEngine) StartProducer(serverAddr string, chanID string, payload int) {
-	signer := localmsp.NewSigner()
 	ordererName := "orderer.example.com"
 	fpath := helpers.GetCryptoConfigPath(fmt.Sprintf("ordererOrganizations/example.com/orderers/%s"+"*", ordererName))
 	matches, err := filepath.Glob(fpath)
@@ -58,21 +79,11 @@ func (e *OrdererTrafficEngine) StartProducer(serverAddr string, chanID string, p
 	}
 
 	var conn *grpc.ClientConn
-	if e.tlsEnabled {
-		if len(matches) > 0 {
-			e.ordConf.General.BCCSP.SwOpts.FileKeystore.KeyStorePath = fmt.Sprintf("%s/msp/keystore", matches[0])
-			err = mspmgmt.LoadLocalMsp(fmt.Sprintf("%s/msp", matches[0]), e.ordConf.General.BCCSP, "OrdererMSP")
-			if err != nil { // Handle errors reading the config file
-				panic(fmt.Sprintf("Failed to initialize local MSP on chan %s: %s", chanID, err))
-			}
-
-			creds, err1 := credentials.NewClientTLSFromFile(fmt.Sprintf("%s/tls/ca.crt", matches[0]), fmt.Sprintf("%s", ordererName))
-			conn, err1 = grpc.Dial(serverAddr, grpc.WithTransportCredentials(creds))
-			if err1 != nil {
-				panic(fmt.Sprintf("Error connecting (grpcs) to %s, err: %v\n", serverAddr, err))
-			}
-		} else {
-			panic(fmt.Sprintf("startProducer: no msp directory filepath name matches: %s\n", fpath))
+	if appConf.TlsEnabled {
+		creds, err1 := credentials.NewClientTLSFromFile(fmt.Sprintf("%s/tls/ca.crt", matches[0]), fmt.Sprintf("%s", ordererName))
+		conn, err1 = grpc.Dial(serverAddr, grpc.WithTransportCredentials(creds))
+		if err1 != nil {
+			panic(fmt.Sprintf("Error connecting (grpcs) to %s, err: %v\n", serverAddr, err))
 		}
 	} else {
 		conn, err = grpc.Dial(serverAddr, grpc.WithInsecure())
@@ -92,7 +103,7 @@ func (e *OrdererTrafficEngine) StartProducer(serverAddr string, chanID string, p
 
 	logger.Info("Starting Producer to send TXs to ord[%s] srvr=%s chID=%s, %v", ordererName, serverAddr, chanID, time.Now())
 
-	b := NewBroadcastClient(client, chanID, signer)
+	b := NewBroadcastClient(client, chanID, e.signer)
 	time.Sleep(2 * time.Second)
 
 	_ = b.Broadcast([]byte("100"))
@@ -105,7 +116,6 @@ func (e *OrdererTrafficEngine) StartProducer(serverAddr string, chanID string, p
 }
 
 func (e *OrdererTrafficEngine) StartConsumer(serverAddr string, chanID string, seek int) {
-	signer := localmsp.NewSigner()
 	ordererName := "orderer.example.com"
 	fpath := helpers.GetCryptoConfigPath(fmt.Sprintf("ordererOrganizations/example.com/orderers/%s"+"*", ordererName))
 	matches, err := filepath.Glob(fpath)
@@ -120,14 +130,8 @@ func (e *OrdererTrafficEngine) StartConsumer(serverAddr string, chanID string, s
 	var conntimeout time.Duration = 30 * time.Second
 	dialOpts = append(dialOpts, grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(maxGrpcMsgSize),
 		grpc.MaxCallRecvMsgSize(maxGrpcMsgSize)))
-	if e.tlsEnabled {
+	if appConf.TlsEnabled {
 		if len(matches) > 0 {
-			e.ordConf.General.BCCSP.SwOpts.FileKeystore.KeyStorePath = fmt.Sprintf("%s/msp/keystore", matches[0])
-			err = mspmgmt.LoadLocalMsp(fmt.Sprintf("%s/msp", matches[0]), e.ordConf.General.BCCSP, "OrdererMSP")
-			if err != nil { // Handle errors reading the config file
-				panic(fmt.Sprintf("Failed to initialize local MSP on chan %s: %s", chanID, err))
-			}
-
 			creds, err := credentials.NewClientTLSFromFile(fmt.Sprintf("%s/tls/ca.crt", matches[0]), fmt.Sprintf("%s", ordererName))
 			if err != nil {
 				panic(fmt.Sprintf("Error creating grpc tls client creds, serverAddr %s, err: %v", serverAddr, err))
@@ -151,7 +155,7 @@ func (e *OrdererTrafficEngine) StartConsumer(serverAddr string, chanID string, s
 	if err != nil {
 		panic(fmt.Sprintf("Error invoking Deliver() on grpc connection to %s, err: %v", serverAddr, err))
 	}
-	s := NewDeliverClient(client, chanID, signer)
+	s := NewDeliverClient(client, chanID, e.signer)
 	if err = s.seekOldest(); err != nil {
 		panic(fmt.Sprintf("ERROR starting srvr=%s chID=%s; err: %v", serverAddr, chanID, err))
 	}
