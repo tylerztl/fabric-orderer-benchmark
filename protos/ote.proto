@@ -31,3 +31,11 @@ enum StatusCode {
 message ServerStatus {
     StatusCode status = 1;
 }
+
+message SendTransactionRequest {
+}
+
+// Interface exported by the server.
+service Channel {
+    rpc SendTransaction (SendTransactionRequest) returns (ServerStatus) {}
+}

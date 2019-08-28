@@ -17,11 +17,6 @@ func NewChannelService() *ChannelService {
 	}
 }
 
-func (c *ChannelService) CreateChannel(ctx context.Context, r *pb.CreateChannelRequest) (*pb.CreateChannelResponse, error) {
-	transactionID, code, err := c.provider.CreateChannel(r.ChannelId)
-	return &pb.CreateChannelResponse{Status: code, TransactionId: string(transactionID)}, err
-}
-
 func (c *ChannelService) SendTransaction(ctx context.Context, r *pb.SendTransactionRequest) (*pb.ServerStatus, error) {
 	code, err := c.provider.SendTransaction()
 	return &pb.ServerStatus{Status: code}, err
