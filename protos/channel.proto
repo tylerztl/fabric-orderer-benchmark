@@ -16,7 +16,7 @@ import "common.proto";
 // Interface exported by the server.
 service Channel {
     rpc CreateChannel (CreateChannelRequest) returns (CreateChannelResponse) {}
-    rpc JoinChannel (JoinChannelRequest) returns (ServerStatus) {}
+    rpc SendTransaction (SendTransactionRequest) returns (ServerStatus) {}
 }
 
 message CreateChannelRequest {
@@ -28,6 +28,5 @@ message CreateChannelResponse {
     string transaction_id = 2;
 }
 
-message JoinChannelRequest {
-    string channel_id = 1;
+message SendTransactionRequest {
 }

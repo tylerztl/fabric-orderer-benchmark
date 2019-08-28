@@ -11,10 +11,3 @@ func TestCreateChannel(t *testing.T) {
 		t.Error("Create channel failed")
 	}
 }
-
-func TestJoinChannel(t *testing.T) {
-	status, err := JoinChannel("mychannel")
-	if status != pb.StatusCode_SUCCESS || err != nil {
-		t.Error("Join channel failed")
-	}
-}

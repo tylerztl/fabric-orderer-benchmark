@@ -73,13 +73,13 @@ func (d *DeliverClient) seekSingle(blockNumber uint64) error {
 	return d.client.Send(d.seekHelper(d.chanID, specific, specific))
 }
 
-func (d *DeliverClient) readUntilClose(ordererIndex int, channelIndex int, txRecvCntrP *int64, blockRecvCntrP *int64) {
+func (d *DeliverClient) readUntilClose() {
 	for {
 		msg, err := d.client.Recv()
 		if err != nil {
 			if !strings.Contains(err.Error(), "is closing") {
 				// print if we do not see the msg indicating graceful closing of the connection
-				logger.Error(fmt.Sprintf("Consumer for orderer %d channel %d readUntilClose() Recv error: %v", ordererIndex, channelIndex, err))
+				logger.Error(fmt.Sprintf("Consumer  Recv error: %v", err))
 			}
 			return
 		}
@@ -88,9 +88,11 @@ func (d *DeliverClient) readUntilClose(ordererIndex int, channelIndex int, txRec
 			logger.Info(fmt.Sprintf("Got DeliverResponse_Status: %v", t))
 			return
 		case *ab.DeliverResponse_Block:
-			*txRecvCntrP += int64(len(t.Block.Data.Data))
-			*blockRecvCntrP++
-			logger.Info(fmt.Sprintf("Block.Data: %v", t.Block.Data))
+			for _, envBytes := range t.Block.Data.Data {
+				envelope, _ := utils.GetEnvelopeFromBlock(envBytes)
+				payload, _ := utils.GetPayload(envelope)
+				logger.Info(fmt.Sprintf("Block.Data: %v", string(payload.Data)))
+			}
 		}
 	}
 }

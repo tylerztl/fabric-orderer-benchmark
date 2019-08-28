@@ -22,7 +22,7 @@ func (c *ChannelService) CreateChannel(ctx context.Context, r *pb.CreateChannelR
 	return &pb.CreateChannelResponse{Status: code, TransactionId: string(transactionID)}, err
 }
 
-func (c *ChannelService) JoinChannel(ctx context.Context, r *pb.JoinChannelRequest) (*pb.ServerStatus, error) {
-	code, err := c.provider.JoinChannel(r.ChannelId)
+func (c *ChannelService) SendTransaction(ctx context.Context, r *pb.SendTransactionRequest) (*pb.ServerStatus, error) {
+	code, err := c.provider.SendTransaction()
 	return &pb.ServerStatus{Status: code}, err
 }

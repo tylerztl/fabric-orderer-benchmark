@@ -18,14 +18,6 @@ import (
 	"google.golang.org/grpc/credentials"
 )
 
-var (
-	genesisConfigLocation = "CONFIGTX_ORDERER_"
-	ordererConfigLocation = "ORDERER_GENERAL_"
-	batchSizeParamStr     = genesisConfigLocation + "BATCHSIZE_MAXMESSAGECOUNT"
-	batchTimeoutParamStr  = genesisConfigLocation + "BATCHTIMEOUT"
-	ordererTypeParamStr   = genesisConfigLocation + "ORDERERTYPE"
-)
-
 const randomString = "abcdef1234567890"
 
 func extraDataSend(size int) string {
@@ -125,7 +117,7 @@ func (e *OrdererTrafficEngine) StartProducer(serverAddr string, chanID string, p
 	}
 }
 
-func (e *OrdererTrafficEngine) StartConsumer(serverAddr string, chanID string, ordererIndex int, channelIndex int, txRecvCntrP *int64, blockRecvCntrP *int64, consumerConnP **grpc.ClientConn, seek int, quiet bool, tlsEnabled bool, orgMSPID string) {
+func (e *OrdererTrafficEngine) StartConsumer(serverAddr string, chanID string, seek int) {
 	signer := localmsp.NewSigner()
 	ordererName := "orderer.example.com"
 	fpath := helpers.GetCryptoConfigPath(fmt.Sprintf("ordererOrganizations/example.com/orderers/%s"+"*", ordererName))
@@ -141,15 +133,14 @@ func (e *OrdererTrafficEngine) StartConsumer(serverAddr string, chanID string, o
 	var conntimeout time.Duration = 30 * time.Second
 	dialOpts = append(dialOpts, grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(maxGrpcMsgSize),
 		grpc.MaxCallRecvMsgSize(maxGrpcMsgSize)))
-	if tlsEnabled {
+	if e.tlsEnabled {
 		if len(matches) > 0 {
 			e.ordConf.General.BCCSP.SwOpts.FileKeystore.KeyStorePath = fmt.Sprintf("%s/msp/keystore", matches[0])
-			if ordererIndex == 0 { // Loading the msp's of orderer0 for every channel is enough to create the deliver client
-				err = mspmgmt.LoadLocalMsp(fmt.Sprintf("%s/msp", matches[0]), e.ordConf.General.BCCSP, orgMSPID)
-				if err != nil { // Handle errors reading the config file
-					panic(fmt.Sprintf("Failed to initialize local MSP on chan %s: %s", chanID, err))
-				}
+			err = mspmgmt.LoadLocalMsp(fmt.Sprintf("%s/msp", matches[0]), e.ordConf.General.BCCSP, "OrdererMSP")
+			if err != nil { // Handle errors reading the config file
+				panic(fmt.Sprintf("Failed to initialize local MSP on chan %s: %s", chanID, err))
 			}
+
 			creds, err := credentials.NewClientTLSFromFile(fmt.Sprintf("%s/tls/ca.crt", matches[0]), fmt.Sprintf("%s", ordererName))
 			if err != nil {
 				panic(fmt.Sprintf("Error creating grpc tls client creds, serverAddr %s, err: %v", serverAddr, err))
@@ -165,11 +156,11 @@ func (e *OrdererTrafficEngine) StartConsumer(serverAddr string, chanID string, o
 	ctx, cancel := context.WithTimeout(context.Background(), conntimeout)
 	defer cancel()
 
-	*consumerConnP, err = grpc.DialContext(ctx, serverAddr, dialOpts...)
+	consumerConnP, err := grpc.DialContext(ctx, serverAddr, dialOpts...)
 	if err != nil {
 		panic(fmt.Sprintf("Error connecting (grpc) to %s, err: %v", serverAddr, err))
 	}
-	client, err := ab.NewAtomicBroadcastClient(*consumerConnP).Deliver(context.TODO())
+	client, err := ab.NewAtomicBroadcastClient(consumerConnP).Deliver(context.TODO())
 	if err != nil {
 		panic(fmt.Sprintf("Error invoking Deliver() on grpc connection to %s, err: %v", serverAddr, err))
 	}
@@ -179,5 +170,5 @@ func (e *OrdererTrafficEngine) StartConsumer(serverAddr string, chanID string, o
 	}
 
 	logger.Info(fmt.Sprintf("Started to recv delivered batches srvr=%s chID=%s", serverAddr, chanID))
-	s.readUntilClose(ordererIndex, channelIndex, txRecvCntrP, blockRecvCntrP)
+	s.readUntilClose()
 }
