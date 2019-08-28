@@ -36,7 +36,7 @@ func Run() (err error) {
 func newGrpc() *grpc.Server {
 	server := grpc.NewServer()
 	// TODO
-	pb.RegisterChannelServer(server, grpchandler.NewChannelService())
+	pb.RegisterOteServer(server, grpchandler.NewOteService())
 
 	return server
 }

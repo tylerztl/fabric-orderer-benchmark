@@ -36,6 +36,6 @@ message SendTransactionRequest {
 }
 
 // Interface exported by the server.
-service Channel {
+service Ote {
     rpc SendTransaction (SendTransactionRequest) returns (ServerStatus) {}
 }

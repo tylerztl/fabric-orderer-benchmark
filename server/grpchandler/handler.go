@@ -1,25 +1,23 @@
 package grpchandler
 
-import "fabric-orderer-benchmark/server/sdkprovider"
+import "fabric-orderer-benchmark/server/ote"
 
 type Handler struct {
-	Provider sdkprovider.SdkProvider
+	engine *ote.OrdererTrafficEngine
 }
 
-var hanlder = NewHandler()
+var hanlder = newHandler()
 
 func init() {
-	provider, err := sdkprovider.NewFabSdkProvider()
-	if err != nil {
-		panic(err)
-	}
-	hanlder.Provider = provider
+	hanlder.engine = ote.NewOTE()
+
+	go hanlder.engine.StartConsumer("localhost:7050", "mychannel1", 0)
 }
 
-func NewHandler() *Handler {
+func newHandler() *Handler {
 	return &Handler{}
 }
 
-func GetSdkProvider() sdkprovider.SdkProvider {
-	return hanlder.Provider
+func getEngine() *ote.OrdererTrafficEngine {
+	return hanlder.engine
 }

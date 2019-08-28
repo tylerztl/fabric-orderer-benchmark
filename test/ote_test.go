@@ -2,23 +2,17 @@ package test
 
 import (
 	pb "fabric-orderer-benchmark/protos"
-	"fabric-orderer-benchmark/server/ote"
 	"fmt"
-	"golang.org/x/net/context"
 	"testing"
+
+	"golang.org/x/net/context"
 )
-
-func TestProducer(t *testing.T) {
-	o := ote.NewOTE()
-	o.StartProducer("localhost:7050", "mychannel1", 0)
-
-}
 
 func sendTransaction() (pb.StatusCode, error) {
 	conn := NewConn()
 	defer conn.Close()
 
-	c := pb.NewChannelClient(conn)
+	c := pb.NewOteClient(conn)
 	context := context.Background()
 	body := &pb.SendTransactionRequest{}
 

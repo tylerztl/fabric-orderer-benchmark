@@ -2,7 +2,6 @@ package ote
 
 import (
 	"fmt"
-	"math/rand"
 	"os"
 	"path/filepath"
 	"time"
@@ -17,16 +16,6 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 )
-
-const randomString = "abcdef1234567890"
-
-func extraDataSend(size int) string {
-	extraTxData := make([]byte, size*1024) //size in kb
-	for i := range extraTxData {
-		extraTxData[i] = randomString[rand.Intn(len(randomString))]
-	}
-	return string(extraTxData)
-}
 
 type OrdererTrafficEngine struct {
 	ordConf    *ordererConf.TopLevel
@@ -106,9 +95,7 @@ func (e *OrdererTrafficEngine) StartProducer(serverAddr string, chanID string, p
 	b := NewBroadcastClient(client, chanID, signer)
 	time.Sleep(2 * time.Second)
 
-	txData := extraDataSend(payload) //create the extra payload
-
-	_ = b.Broadcast([]byte(fmt.Sprintf("Testing  %v %s", time.Now(), txData)))
+	_ = b.Broadcast([]byte("100"))
 	err = b.GetAck()
 	if err == nil {
 		logger.Info("successfully broadcast TX %v", time.Now())
