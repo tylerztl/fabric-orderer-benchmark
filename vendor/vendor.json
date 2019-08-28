@@ -75,12 +75,6 @@
 			"revisionTime": "2019-05-23T09:38:29Z"
 		},
 		{
-			"checksumSHA1": "q7lCcwUNBlcHKCGt4t5T5KouhRo=",
-			"path": "github.com/hyperledger/fabric/common/ledger",
-			"revision": "64969ff81466551eebb01d749afb3e377623c099",
-			"revisionTime": "2019-05-23T09:38:29Z"
-		},
-		{
 			"checksumSHA1": "870Ho1a1vIgPd6+26DEEXAF4ao4=",
 			"path": "github.com/hyperledger/fabric/common/localmsp",
 			"revision": "64969ff81466551eebb01d749afb3e377623c099",
@@ -93,20 +87,8 @@
 			"revisionTime": "2019-05-23T09:38:29Z"
 		},
 		{
-			"checksumSHA1": "WOLMxJCYaKYleZvmGEClhuhM3BE=",
-			"path": "github.com/hyperledger/fabric/common/metrics",
-			"revision": "64969ff81466551eebb01d749afb3e377623c099",
-			"revisionTime": "2019-05-23T09:38:29Z"
-		},
-		{
 			"checksumSHA1": "/ILgj0KyypXxNaIe3ym4Igl/cC0=",
 			"path": "github.com/hyperledger/fabric/common/policies",
-			"revision": "64969ff81466551eebb01d749afb3e377623c099",
-			"revisionTime": "2019-05-23T09:38:29Z"
-		},
-		{
-			"checksumSHA1": "MX+BGZBh0pf2Bpn6CJc6f45T6Xg=",
-			"path": "github.com/hyperledger/fabric/common/semaphore",
 			"revision": "64969ff81466551eebb01d749afb3e377623c099",
 			"revisionTime": "2019-05-23T09:38:29Z"
 		},
@@ -137,18 +119,6 @@
 		{
 			"checksumSHA1": "8az94pV9TSvtiEtsyx+SlWF1CgY=",
 			"path": "github.com/hyperledger/fabric/core/chaincode/platforms/ccmetadata",
-			"revision": "64969ff81466551eebb01d749afb3e377623c099",
-			"revisionTime": "2019-05-23T09:38:29Z"
-		},
-		{
-			"checksumSHA1": "8yz9QAMoQK4jmaWqT5VWE8FlLkE=",
-			"path": "github.com/hyperledger/fabric/core/chaincode/shim",
-			"revision": "64969ff81466551eebb01d749afb3e377623c099",
-			"revisionTime": "2019-05-23T09:38:29Z"
-		},
-		{
-			"checksumSHA1": "crueK9qtTS/jmPMisEzdE6BTKQ4=",
-			"path": "github.com/hyperledger/fabric/core/comm",
 			"revision": "64969ff81466551eebb01d749afb3e377623c099",
 			"revisionTime": "2019-05-23T09:38:29Z"
 		},
@@ -203,12 +173,6 @@
 		{
 			"checksumSHA1": "3XWOk6gmXp/PgxLPRPEym24NrEg=",
 			"path": "github.com/hyperledger/fabric/protos/common",
-			"revision": "64969ff81466551eebb01d749afb3e377623c099",
-			"revisionTime": "2019-05-23T09:38:29Z"
-		},
-		{
-			"checksumSHA1": "VUi6bvt1ZYup3fiikhQOFhuGuNs=",
-			"path": "github.com/hyperledger/fabric/protos/ledger/queryresult",
 			"revision": "64969ff81466551eebb01d749afb3e377623c099",
 			"revisionTime": "2019-05-23T09:38:29Z"
 		},
