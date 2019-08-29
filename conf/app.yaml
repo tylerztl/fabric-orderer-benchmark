@@ -11,6 +11,6 @@ application:
   ordererMsp: OrdererMSP
   profile: TwoOrgsOrdererGenesis
   channels:
-    - mychannel1
+    - mychannel
   tlsEnabled: true
   reqTimeout: 120

@@ -14,6 +14,18 @@
 protos :
 	./scripts/compile_protos.sh
 
+.PHONY: networkUp
+networkUp :
+	./scripts/start_network.sh -m up
+
+.PHONY: networkDown
+networkDown :
+	./scripts/start_network.sh -m down
+
+.PHONY: cli
+cli :
+	./scripts/start_network.sh -m cli
+
 .PHONY: start
 start :
 	go run main.go start

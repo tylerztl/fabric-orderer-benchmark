@@ -1,0 +1,20 @@
+# Copyright IBM Corp. All Rights Reserved.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+
+version: '2'
+
+networks:
+  byfn:
+
+services:
+  orderer.example.com:
+    extends:
+      file: docker-compose-base.yaml
+      service: orderer.example.com
+    volumes:
+      - ./genesis-solo.block:/var/hyperledger/orderer/orderer.genesis.block
+    container_name: orderer.example.com
+    networks:
+      - byfn

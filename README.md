@@ -10,19 +10,23 @@ hyperledger fabric ordering service.
 - Protocol Buffers
 
 ### Getting started
-Download fabric images
+1.Download fabric images
 ```
 ./scripts/download_images.sh
 ```
-Start the fabric network
+2.Start the fabric network
 ```
 make networkUp
 ```
-Start the fabric-sdk-go server
+3.Create channel
+```
+make cli
+```
+4.Start the ote server
 ```
 make start
 ```
-Running the test suite
+5.Running the test suite
 ```
 cd test
 ```
