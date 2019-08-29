@@ -1,0 +1,18 @@
+{
+  "total": 200,
+  "concurrency": 20,
+  "host": "0.0.0.0:8080",
+  "proto": "../protos/ote.proto",
+  "call": "protos.Ote.SendTransaction",
+  "data": {},
+  "metadata": {
+    "trace_id": "{{.RequestNumber}}",
+    "timestamp": "{{.TimestampUnix}}"
+  },
+  "binary": false,
+  "insecure": true,
+  "CPUs": 4,
+  "output": "pretty.html",
+  "format": "html",
+  "name": "Fabric orderer performance test"
+}

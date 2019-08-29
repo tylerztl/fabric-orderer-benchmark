@@ -1,5 +1,6 @@
-## Hyperledger Fabric Client SDK for Go
-This GRPC server enables Go developers to build solutions that interact with Hyperledger Fabric by fabric-sdk-go .
+## Orderer Traffic Engine
+This Orderer Traffic Engine (OTE) tool tests the operation of a
+hyperledger fabric ordering service.
 
 ### Prerequisites
 - Go 1.10+ installation or later
@@ -26,19 +27,10 @@ Running the test suite
 cd test
 ```
 
-### Directory description
-```
-|--artifacts            // 启动fabric网络相关配置文件
-|--conf                 // 项目配置文件
-|  |--src               // 链码所在路径
-|--logs                 // 日志文件所在路径
-|--protos               // grpc所用的协议定义路径
-|--scripts              // 脚本文件路径
-|--server               // 服务功能实现
-|  |--grpchandler       // 处理客户端grpc请求响应
-|  |--helpers           // 通用的代码块
-|  |--sdkprovider       // 调用fabric-sdk-go的接口
-|  |--test              // 单元测试
-|  |--vendor            // 项目依赖包 
-```
+### ghz 
+Simple [gRPC](http://grpc.io/) benchmarking and load testing tool inspired by [hey](https://github.com/rakyll/hey/) and [grpcurl](https://github.com/fullstorydev/grpcurl).
 
+```
+cd ghz
+./ghz --config=./config.json 
+```
