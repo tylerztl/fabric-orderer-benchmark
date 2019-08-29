@@ -3,10 +3,13 @@ package test
 import (
 	pb "fabric-orderer-benchmark/protos"
 	"fmt"
+	"sync"
 	"testing"
 
 	"golang.org/x/net/context"
 )
+
+var producersWG sync.WaitGroup
 
 func sendTransaction() (pb.StatusCode, error) {
 	conn := NewConn()
@@ -16,16 +19,26 @@ func sendTransaction() (pb.StatusCode, error) {
 	context := context.Background()
 	body := &pb.SendTransactionRequest{}
 
-	r, err := c.SendTransaction(context, body)
-	fmt.Printf("StatusCode: %s, err: %v\n", r.Status, err)
-	return r.Status, err
+	if r, err := c.SendTransaction(context, body); err != nil {
+		producersWG.Done()
+		fmt.Println("err: ", err.Error())
+		return pb.StatusCode_FAILED, err
+	} else {
+		producersWG.Done()
+		return r.Status, nil
+	}
 }
 
 func TestSendTransaction(t *testing.T) {
-	for i := 0; i < 10; i++ {
-		status, err := sendTransaction()
-		if status != pb.StatusCode_SUCCESS || err != nil {
-			t.Error("Send transaction failed")
-		}
+	//status, err := sendTransaction()
+	//if status != pb.StatusCode_SUCCESS || err != nil {
+	//	t.Error("Send transaction failed")
+	//}
+
+	txNums := 10
+	producersWG.Add(txNums)
+	for i := 0; i < txNums; i++ {
+		go sendTransaction()
 	}
+	producersWG.Wait()
 }

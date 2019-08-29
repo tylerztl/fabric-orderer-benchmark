@@ -15,7 +15,7 @@ func NewOteService() *OteService {
 func (c *OteService) SendTransaction(ctx context.Context, r *pb.SendTransactionRequest) (*pb.ServerStatus, error) {
 	err := getEngine().TransactionProducer()
 	if err != nil {
-		return &pb.ServerStatus{Status: pb.StatusCode_FAILED}, err
+		return nil, err
 	}
 	return &pb.ServerStatus{Status: pb.StatusCode_SUCCESS}, nil
 }

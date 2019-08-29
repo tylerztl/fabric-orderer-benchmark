@@ -1,6 +1,7 @@
 package ote
 
 import (
+	"errors"
 	"fabric-orderer-benchmark/server/helpers"
 	"fmt"
 	"os"
@@ -35,6 +36,7 @@ type OrdererTrafficEngine struct {
 	ordererClients map[string][]*BroadcastClient
 	txId           uint64
 	txIdMutex      *sync.Mutex
+	reqChans       map[uint64]chan bool
 }
 
 func NewOTE() *OrdererTrafficEngine {
@@ -76,6 +78,7 @@ func NewOTE() *OrdererTrafficEngine {
 		initOrdererClients(signer),
 		0,
 		new(sync.Mutex),
+		make(map[uint64]chan bool),
 	}
 
 	var serverAddr string
@@ -169,7 +172,20 @@ func (e *OrdererTrafficEngine) TransactionProducer() error {
 	}
 	Logger.Info("successfully broadcast TxId [%d] to channel [%s] orderer [%s]", txId, channelId,
 		AppConf.ConnOrderers[txId%uint64(len(AppConf.ConnOrderers))].Host)
-	return nil
+
+	txChan := make(chan bool)
+	e.reqChans[txId] = txChan
+
+	select {
+	case _ = <-txChan:
+		delete(e.reqChans, txId)
+		return nil
+	case <-time.After(time.Second * 10):
+		errStr := fmt.Sprintf("Timeout to broadcast TxId [%d] to channel [%s] orderer [%s]", txId, channelId,
+			AppConf.ConnOrderers[txId%uint64(len(AppConf.ConnOrderers))].Host)
+		Logger.Error(errStr)
+		return errors.New(errStr)
+	}
 }
 
 func (e *OrdererTrafficEngine) StartConsumer(serverAddr, serverHost, channelId, cryptoPath string) {
