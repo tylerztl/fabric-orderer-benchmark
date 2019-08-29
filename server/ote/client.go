@@ -81,6 +81,9 @@ func (d *DeliverClient) readUntilClose() {
 		case *ab.DeliverResponse_Status:
 			Logger.Info(fmt.Sprintf("Got DeliverResponse_Status: %v", t))
 		case *ab.DeliverResponse_Block:
+			if t.Block.Header.Number == 0 {
+				continue
+			}
 			for _, envBytes := range t.Block.Data.Data {
 				envelope, err := utils.GetEnvelopeFromBlock(envBytes)
 				if err != nil {

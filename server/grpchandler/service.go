@@ -12,10 +12,10 @@ func NewOteService() *OteService {
 	return &OteService{}
 }
 
-func (c *OteService) SendTransaction(ctx context.Context, r *pb.SendTransactionRequest) (*pb.ServerStatus, error) {
+func (c *OteService) SendTransaction(ctx context.Context, r *pb.SendTransactionRequest) (*pb.ResponseStatus, error) {
 	err := getEngine().TransactionProducer()
 	if err != nil {
 		return nil, err
 	}
-	return &pb.ServerStatus{Status: pb.StatusCode_SUCCESS}, nil
+	return &pb.ResponseStatus{Status: pb.StatusCode_SUCCESS}, nil
 }

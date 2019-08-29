@@ -7,13 +7,12 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
 
 	"github.com/hyperledger/fabric/common/crypto"
 	"github.com/hyperledger/fabric/common/localmsp"
-	genesisconfig "github.com/hyperledger/fabric/common/tools/configtxgen/localconfig" // config for genesis.yaml
+	//genesisconfig "github.com/hyperledger/fabric/common/tools/configtxgen/localconfig" // config for genesis.yaml
 	mspmgmt "github.com/hyperledger/fabric/msp/mgmt"
 	ordererConf "github.com/hyperledger/fabric/orderer/common/localconfig" // config, for the orderer.yaml
 	ab "github.com/hyperledger/fabric/protos/orderer"
@@ -32,8 +31,8 @@ var (
 var reqChans = make(map[uint64]chan uint64)
 
 type OrdererTrafficEngine struct {
-	ordConf        *ordererConf.TopLevel
-	genConf        *genesisconfig.Profile
+	ordConf *ordererConf.TopLevel
+	//genConf        *genesisconfig.Profile
 	signer         crypto.LocalSigner
 	ordererClients map[string][]*BroadcastClient
 	txId           uint64
@@ -53,7 +52,7 @@ func NewOTE() *OrdererTrafficEngine {
 		panic(" Cannot Load orderer config data: " + err.Error())
 	}
 
-	genConf := genesisconfig.Load(strings.ToLower(AppConf.Profile))
+	//genConf := genesisconfig.Load(strings.ToLower(AppConf.Profile))
 
 	if len(AppConf.ConnOrderers) == 0 {
 		panic(" Cannot find connect orderers config")
@@ -74,7 +73,7 @@ func NewOTE() *OrdererTrafficEngine {
 
 	engine := &OrdererTrafficEngine{
 		ordConf,
-		genConf,
+		//genConf,
 		signer,
 		initOrdererClients(signer),
 		0,

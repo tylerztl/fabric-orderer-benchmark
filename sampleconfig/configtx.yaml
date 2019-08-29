@@ -323,129 +323,129 @@ Profiles:
             Capabilities:
                 <<: *ApplicationCapabilities
 
-#    SampleDevModeKafka:
-#        <<: *ChannelDefaults
-#        Capabilities:
-#            <<: *ChannelCapabilities
-#        Orderer:
-#            <<: *OrdererDefaults
-#            OrdererType: kafka
-#            Kafka:
-#                Brokers:
-#                - kafka.example.com:9092
-#
-#            Organizations:
-#            - *OrdererOrg
-#            Capabilities:
-#                <<: *OrdererCapabilities
-#        Application:
-#            <<: *ApplicationDefaults
-#            Organizations:
-#            - <<: *OrdererOrg
-#        Consortiums:
-#            SampleConsortium:
-#                Organizations:
-#                - *Org1
-#                - *Org2
-#
-#    SampleMultiNodeEtcdRaft:
-#        <<: *ChannelDefaults
-#        Capabilities:
-#            <<: *ChannelCapabilities
-#        Orderer:
-#            <<: *OrdererDefaults
-#            OrdererType: etcdraft
-#            EtcdRaft:
-#                Consenters:
-#                - Host: orderer.example.com
-#                  Port: 7050
-#                  ClientTLSCert: crypto-config/ordererOrganizations/example.com/orderers/orderer.example.com/tls/server.crt
-#                  ServerTLSCert: crypto-config/ordererOrganizations/example.com/orderers/orderer.example.com/tls/server.crt
-#                - Host: orderer2.example.com
-#                  Port: 7050
-#                  ClientTLSCert: crypto-config/ordererOrganizations/example.com/orderers/orderer2.example.com/tls/server.crt
-#                  ServerTLSCert: crypto-config/ordererOrganizations/example.com/orderers/orderer2.example.com/tls/server.crt
-#                - Host: orderer3.example.com
-#                  Port: 7050
-#                  ClientTLSCert: crypto-config/ordererOrganizations/example.com/orderers/orderer3.example.com/tls/server.crt
-#                  ServerTLSCert: crypto-config/ordererOrganizations/example.com/orderers/orderer3.example.com/tls/server.crt
-#                - Host: orderer4.example.com
-#                  Port: 7050
-#                  ClientTLSCert: crypto-config/ordererOrganizations/example.com/orderers/orderer4.example.com/tls/server.crt
-#                  ServerTLSCert: crypto-config/ordererOrganizations/example.com/orderers/orderer4.example.com/tls/server.crt
-#                - Host: orderer5.example.com
-#                  Port: 7050
-#                  ClientTLSCert: crypto-config/ordererOrganizations/example.com/orderers/orderer5.example.com/tls/server.crt
-#                  ServerTLSCert: crypto-config/ordererOrganizations/example.com/orderers/orderer5.example.com/tls/server.crt
-##                Options:
-##                    TickInterval: 500
-##                    ElectionTick: 10
-##                    HeartbeatTick: 1
-##                    MaxInflightBlocks: 5
-##                    SnapshotIntervalSize: 10
-#            Addresses:
-#                - orderer.example.com:7050
-#                - orderer2.example.com:7050
-#                - orderer3.example.com:7050
-#                - orderer4.example.com:7050
-#                - orderer5.example.com:7050
-#
-#            Organizations:
-#            - *OrdererOrg
-#            Capabilities:
-#                <<: *OrdererCapabilities
-#        Application:
-#            <<: *ApplicationDefaults
-#            Organizations:
-#            - <<: *OrdererOrg
-#        Consortiums:
-#            SampleConsortium:
-#                Organizations:
-#                - *Org1
-#                - *Org2
+    SampleDevModeKafka:
+        <<: *ChannelDefaults
+        Capabilities:
+            <<: *ChannelCapabilities
+        Orderer:
+            <<: *OrdererDefaults
+            OrdererType: kafka
+            Kafka:
+                Brokers:
+                - kafka.example.com:9092
 
-#    SampleDevModeSbft:
-#        <<: *ChannelDefaults
-#        Orderer:
-#            <<: *OrdererDefaults
-#            OrdererType: sbft
-#            Sbft:
-#                Consenters:
-#                - Host: orderer.example.com
-#                  Port: 6101
-#                  ClientSignCert: crypto-config/ordererOrganizations/example.com/orderers/orderer.example.com/msp/signcerts/orderer.example.com-cert.pem
-#                  ServerTLSCert: crypto-config/ordererOrganizations/example.com/orderers/orderer.example.com/tls/server.crt
-#                - Host: orderer2.example.com
-#                  Port: 6101
-#                  ClientSignCert: crypto-config/ordererOrganizations/example.com/orderers/orderer2.example.com/msp/signcerts/orderer2.example.com-cert.pem
-#                  ServerTLSCert: crypto-config/ordererOrganizations/example.com/orderers/orderer2.example.com/tls/server.crt
-#                - Host: orderer3.example.com
-#                  Port: 6101
-#                  ClientSignCert: crypto-config/ordererOrganizations/example.com/orderers/orderer3.example.com/msp/signcerts/orderer3.example.com-cert.pem
-#                  ServerTLSCert: crypto-config/ordererOrganizations/example.com/orderers/orderer3.example.com/tls/server.crt
-#                - Host: orderer4.example.com
-#                  Port: 6101
-#                  ClientSignCert: crypto-config/ordererOrganizations/example.com/orderers/orderer4.example.com/msp/signcerts/orderer4.example.com-cert.pem
-#                  ServerTLSCert: crypto-config/ordererOrganizations/example.com/orderers/orderer4.example.com/tls/server.crt
+            Organizations:
+            - *OrdererOrg
+            Capabilities:
+                <<: *OrdererCapabilities
+        Application:
+            <<: *ApplicationDefaults
+            Organizations:
+            - <<: *OrdererOrg
+        Consortiums:
+            SampleConsortium:
+                Organizations:
+                - *Org1
+                - *Org2
+
+    SampleMultiNodeEtcdRaft:
+        <<: *ChannelDefaults
+        Capabilities:
+            <<: *ChannelCapabilities
+        Orderer:
+            <<: *OrdererDefaults
+            OrdererType: etcdraft
+            EtcdRaft:
+                Consenters:
+                - Host: orderer.example.com
+                  Port: 7050
+                  ClientTLSCert: crypto-config/ordererOrganizations/example.com/orderers/orderer.example.com/tls/server.crt
+                  ServerTLSCert: crypto-config/ordererOrganizations/example.com/orderers/orderer.example.com/tls/server.crt
+                - Host: orderer2.example.com
+                  Port: 7050
+                  ClientTLSCert: crypto-config/ordererOrganizations/example.com/orderers/orderer2.example.com/tls/server.crt
+                  ServerTLSCert: crypto-config/ordererOrganizations/example.com/orderers/orderer2.example.com/tls/server.crt
+                - Host: orderer3.example.com
+                  Port: 7050
+                  ClientTLSCert: crypto-config/ordererOrganizations/example.com/orderers/orderer3.example.com/tls/server.crt
+                  ServerTLSCert: crypto-config/ordererOrganizations/example.com/orderers/orderer3.example.com/tls/server.crt
+                - Host: orderer4.example.com
+                  Port: 7050
+                  ClientTLSCert: crypto-config/ordererOrganizations/example.com/orderers/orderer4.example.com/tls/server.crt
+                  ServerTLSCert: crypto-config/ordererOrganizations/example.com/orderers/orderer4.example.com/tls/server.crt
+                - Host: orderer5.example.com
+                  Port: 7050
+                  ClientTLSCert: crypto-config/ordererOrganizations/example.com/orderers/orderer5.example.com/tls/server.crt
+                  ServerTLSCert: crypto-config/ordererOrganizations/example.com/orderers/orderer5.example.com/tls/server.crt
 #                Options:
-#                  # Number of peers
-#                  "N": 4
-#                  # Fault tolerance
-#                  F: 1
-#                  # Timeout of requests (seconds)
-#                  RequestTimeoutNsec: 1000000000
-#            Addresses:
-#                - orderer.example.com:7050
-#            Organizations:
-#            - *OrdererOrg
-#            Capabilities:
-#                <<: *OrdererCapabilities
-#        Application:
-#            <<: *ApplicationDefaults
-#            Organizations:
-#            - <<: *OrdererOrg
-#        Consortiums:
-#            SampleConsortium:
-#                Organizations:
-#                - *Org1
-#                - *Org2
+#                    TickInterval: 500
+#                    ElectionTick: 10
+#                    HeartbeatTick: 1
+#                    MaxInflightBlocks: 5
+#                    SnapshotIntervalSize: 10
+            Addresses:
+                - orderer.example.com:7050
+                - orderer2.example.com:7050
+                - orderer3.example.com:7050
+                - orderer4.example.com:7050
+                - orderer5.example.com:7050
+
+            Organizations:
+            - *OrdererOrg
+            Capabilities:
+                <<: *OrdererCapabilities
+        Application:
+            <<: *ApplicationDefaults
+            Organizations:
+            - <<: *OrdererOrg
+        Consortiums:
+            SampleConsortium:
+                Organizations:
+                - *Org1
+                - *Org2
+
+    SampleDevModeSbft:
+        <<: *ChannelDefaults
+        Orderer:
+            <<: *OrdererDefaults
+            OrdererType: sbft
+            Sbft:
+                Consenters:
+                - Host: orderer.example.com
+                  Port: 6101
+                  ClientSignCert: crypto-config/ordererOrganizations/example.com/orderers/orderer.example.com/msp/signcerts/orderer.example.com-cert.pem
+                  ServerTLSCert: crypto-config/ordererOrganizations/example.com/orderers/orderer.example.com/tls/server.crt
+                - Host: orderer2.example.com
+                  Port: 6101
+                  ClientSignCert: crypto-config/ordererOrganizations/example.com/orderers/orderer2.example.com/msp/signcerts/orderer2.example.com-cert.pem
+                  ServerTLSCert: crypto-config/ordererOrganizations/example.com/orderers/orderer2.example.com/tls/server.crt
+                - Host: orderer3.example.com
+                  Port: 6101
+                  ClientSignCert: crypto-config/ordererOrganizations/example.com/orderers/orderer3.example.com/msp/signcerts/orderer3.example.com-cert.pem
+                  ServerTLSCert: crypto-config/ordererOrganizations/example.com/orderers/orderer3.example.com/tls/server.crt
+                - Host: orderer4.example.com
+                  Port: 6101
+                  ClientSignCert: crypto-config/ordererOrganizations/example.com/orderers/orderer4.example.com/msp/signcerts/orderer4.example.com-cert.pem
+                  ServerTLSCert: crypto-config/ordererOrganizations/example.com/orderers/orderer4.example.com/tls/server.crt
+                Options:
+                  # Number of peers
+                  "N": 4
+                  # Fault tolerance
+                  F: 1
+                  # Timeout of requests (seconds)
+                  RequestTimeoutNsec: 1000000000
+            Addresses:
+                - orderer.example.com:7050
+            Organizations:
+            - *OrdererOrg
+            Capabilities:
+                <<: *OrdererCapabilities
+        Application:
+            <<: *ApplicationDefaults
+            Organizations:
+            - <<: *OrdererOrg
+        Consortiums:
+            SampleConsortium:
+                Organizations:
+                - *Org1
+                - *Org2
