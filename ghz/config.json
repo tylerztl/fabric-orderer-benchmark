@@ -1,6 +1,6 @@
 {
-  "total": 50,
-  "concurrency": 5,
+  "total": 10000,
+  "concurrency": 100,
   "host": "0.0.0.0:8080",
   "proto": "../protos/ote.proto",
   "call": "protos.Ote.SendTransaction",
