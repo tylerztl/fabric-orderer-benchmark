@@ -1,0 +1,22 @@
+#
+# Copyright zhigui Corp. All Rights Reserved.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+version: '2'
+
+networks:
+  byfn:
+
+services:
+  orderer-benchmark:
+    container_name: fabric-orderer-benchmark
+    image: hyperledger/fabric-orderer-benchmark
+    ports:
+      - 8080:8080
+    volumes:
+      - ../conf:/go/src/fabric-orderer-benchmark/conf
+      - ../sampleconfig:/go/src/fabric-orderer-benchmark/sampleconfig
+      - /tmp/orderer-benchmark-logs:/go/src/fabric-orderer-benchmark/logs
+    networks:
+      - byfn

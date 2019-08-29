@@ -9,7 +9,8 @@
 #   - up - start the fabric network
 #   - clean - teardown the fabric network and clean the containers and intermediate images
 #   - cli - tart the fabric network cli
-#   - satrt - start the fabric-sdk-go server
+#   - satrt - start the fabric-orderer-benchmark server
+#   - benchmark - start benchmark
 
 .PHONY: protos
 protos :
@@ -26,6 +27,10 @@ clean :
 .PHONY: cli
 cli :
 	./scripts/start_network.sh -m cli
+
+.PHONY: benchmark
+benchmark :
+	./scripts/start_network.sh -m benchmark
 
 .PHONY: start
 start :

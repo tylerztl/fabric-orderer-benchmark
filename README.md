@@ -10,26 +10,35 @@ hyperledger fabric ordering service.
 - Protocol Buffers
 
 ### Getting started
-1.Download fabric images
+#### 1. Download fabric images
 ```
 ./scripts/download_images.sh
 ```
-2.Start the fabric network
+#### 2. Start the fabric network
 ```
 make networkUp
 ```
-3.Create channel
+#### 3. Create channel
 ```
 make cli
 ```
-4.Start the ote server
+#### 4. Start the ote server
+4.1 binary start 
 ```
 make start
 ```
-5.Running the test suite
+4.2 docker start
+```
+docker build -t hyperledger/fabric-orderer-benchmark .
+make benchmark
+```
+
+#### 5. Running the test suite
 ```
 cd test
 ```
+
+
 
 ### ghz 
 Simple [gRPC](http://grpc.io/) benchmarking and load testing tool inspired by [hey](https://github.com/rakyll/hey/) and [grpcurl](https://github.com/fullstorydev/grpcurl).

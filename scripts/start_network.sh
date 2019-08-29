@@ -27,6 +27,7 @@ function printHelp () {
   echo "      - 'down' - clear the network with docker-compose down"
   echo "      - 'restart' - restart the network"
   echo "      - 'cli' - start the cli"
+  echo "      - 'benchmark' - start benchmark"
 }
 
 
@@ -64,6 +65,7 @@ function networkDown() {
     echo teardown the network and clean the containers and intermediate images
 	docker-compose down --volumes --remove-orphans
 	docker-compose -f docker-compose-cli.yaml down --volumes --remove-orphans
+	docker-compose -f docker-compose-benchmark.yaml down --volumes --remove-orphans
 	if [ "$MODE" != "restart" ]; then
 	   dkcl
 	   dkrm
@@ -83,6 +85,13 @@ function startCli() {
 	echo
 }
 
+function startBenchmark() {
+	echo
+	echo Start benchmark
+	docker-compose -f docker-compose-benchmark.yaml up -d
+	echo
+}
+
 #Create the network using docker compose
 if [ "${MODE}" == "up" ]; then
   networkUp
@@ -92,6 +101,8 @@ if [ "${MODE}" == "up" ]; then
   networkRestart
   elif [ "${MODE}" == "cli" ]; then ## start the network cli
   startCli
+  elif [ "${MODE}" == "benchmark" ]; then ## start benchmark
+  startBenchmark
 else
   printHelp
   exit 1
