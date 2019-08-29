@@ -2,12 +2,13 @@ package ote
 
 import (
 	"fmt"
-	"math"
-
+	"github.com/golang/protobuf/proto"
 	"github.com/hyperledger/fabric/common/crypto"
 	cb "github.com/hyperledger/fabric/protos/common"
 	ab "github.com/hyperledger/fabric/protos/orderer"
 	"github.com/hyperledger/fabric/protos/utils"
+	"math"
+	"strconv"
 )
 
 var (
@@ -81,9 +82,27 @@ func (d *DeliverClient) readUntilClose() {
 			Logger.Info(fmt.Sprintf("Got DeliverResponse_Status: %v", t))
 		case *ab.DeliverResponse_Block:
 			for _, envBytes := range t.Block.Data.Data {
-				envelope, _ := utils.GetEnvelopeFromBlock(envBytes)
-				payload, _ := utils.GetPayload(envelope)
-				Logger.Info("Seek block number:%d, payload:%s", t.Block.Header.Number, string(payload.Data))
+				envelope, err := utils.GetEnvelopeFromBlock(envBytes)
+				if err != nil {
+					Logger.Error("Error GetEnvelopeFromBlock:", err)
+				}
+				payload, err := utils.GetPayload(envelope)
+				if err != nil {
+					Logger.Error("Error GetPayload:", err)
+				}
+				msg := cb.ConfigValue{}
+				if err := proto.Unmarshal(payload.Data, &msg); err != nil {
+					Logger.Error("Error proto unmarshal", err)
+				}
+				txId, err := strconv.ParseUint(string(msg.Value), 10, 64)
+				if err != nil {
+					Logger.Error("Error ParseUint:", err)
+				}
+
+				Logger.Info("Seek block number:%d, payload:%d", t.Block.Header.Number, txId)
+				if txChan := reqChans[txId]; txChan != nil {
+					txChan <- t.Block.Header.Number
+				}
 			}
 		}
 	}

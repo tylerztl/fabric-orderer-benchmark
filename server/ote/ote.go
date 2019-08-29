@@ -29,6 +29,8 @@ var (
 	AppConf        = helpers.GetAppConf().Conf
 )
 
+var reqChans = make(map[uint64]chan uint64)
+
 type OrdererTrafficEngine struct {
 	ordConf        *ordererConf.TopLevel
 	genConf        *genesisconfig.Profile
@@ -36,7 +38,6 @@ type OrdererTrafficEngine struct {
 	ordererClients map[string][]*BroadcastClient
 	txId           uint64
 	txIdMutex      *sync.Mutex
-	reqChans       map[uint64]chan bool
 }
 
 func NewOTE() *OrdererTrafficEngine {
@@ -78,7 +79,6 @@ func NewOTE() *OrdererTrafficEngine {
 		initOrdererClients(signer),
 		0,
 		new(sync.Mutex),
-		make(map[uint64]chan bool),
 	}
 
 	var serverAddr string
@@ -173,12 +173,13 @@ func (e *OrdererTrafficEngine) TransactionProducer() error {
 	Logger.Info("successfully broadcast TxId [%d] to channel [%s] orderer [%s]", txId, channelId,
 		AppConf.ConnOrderers[txId%uint64(len(AppConf.ConnOrderers))].Host)
 
-	txChan := make(chan bool)
-	e.reqChans[txId] = txChan
+	txChan := make(chan uint64)
+	reqChans[txId] = txChan
 
 	select {
-	case _ = <-txChan:
-		delete(e.reqChans, txId)
+	case blockNum := <-txChan:
+		delete(reqChans, txId)
+		Logger.Info("TxId [%d] successful write to block [%d] on channel [%s]", txId, blockNum, channelId)
 		return nil
 	case <-time.After(time.Second * 10):
 		errStr := fmt.Sprintf("Timeout to broadcast TxId [%d] to channel [%s] orderer [%s]", txId, channelId,
