@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/hyperledger/fabric/common/crypto"
@@ -27,9 +29,12 @@ var (
 )
 
 type OrdererTrafficEngine struct {
-	ordConf *ordererConf.TopLevel
-	genConf *genesisconfig.Profile
-	signer  crypto.LocalSigner
+	ordConf        *ordererConf.TopLevel
+	genConf        *genesisconfig.Profile
+	signer         crypto.LocalSigner
+	ordererClients map[string][]*BroadcastClient
+	txId           uint64
+	txIdMutex      *sync.Mutex
 }
 
 func NewOTE() *OrdererTrafficEngine {
@@ -68,6 +73,9 @@ func NewOTE() *OrdererTrafficEngine {
 		ordConf,
 		genConf,
 		signer,
+		initOrdererClients(signer),
+		0,
+		new(sync.Mutex),
 	}
 
 	var serverAddr string
@@ -86,52 +94,82 @@ func NewOTE() *OrdererTrafficEngine {
 	return engine
 }
 
-func (e *OrdererTrafficEngine) StartProducer(serverAddr string, chanID string) {
-	ordererName := "orderer.example.com"
-	fpath := helpers.GetCryptoConfigPath(fmt.Sprintf("ordererOrganizations/example.com/orderers/%s"+"*", ordererName))
-	matches, err := filepath.Glob(fpath)
-
-	Logger.Info("startProducer ordererName=%s, fpath=%s, len(matches)=%d", ordererName, fpath, len(matches))
-
-	if err != nil {
-		panic(fmt.Sprintf("startProducer: cannot find filepath %s ; err: %v\n", fpath, err))
-	}
-
-	var conn *grpc.ClientConn
-	if AppConf.TlsEnabled {
-		creds, err1 := credentials.NewClientTLSFromFile(fmt.Sprintf("%s/tls/ca.crt", matches[0]), fmt.Sprintf("%s", ordererName))
-		conn, err1 = grpc.Dial(serverAddr, grpc.WithTransportCredentials(creds))
-		if err1 != nil {
-			panic(fmt.Sprintf("Error connecting (grpcs) to %s, err: %v\n", serverAddr, err))
+func initOrdererClients(signer crypto.LocalSigner) (ordererClients map[string][]*BroadcastClient) {
+	ordererClients = make(map[string][]*BroadcastClient)
+	var clients []*BroadcastClient
+	for _, orderer := range AppConf.ConnOrderers {
+		var serverAddr string
+		if AppConf.Local {
+			serverAddr = fmt.Sprintf("localhost:%d", orderer.Port)
+		} else {
+			serverAddr = fmt.Sprintf("%s:%d", orderer.Host, orderer.Port)
 		}
-	} else {
-		conn, err = grpc.Dial(serverAddr, grpc.WithInsecure())
+
+		fpath := helpers.GetCryptoConfigPath(fmt.Sprintf("ordererOrganizations/example.com/orderers/%s"+"*", orderer.Host))
+		matches, err := filepath.Glob(fpath)
+		if err != nil {
+			panic(fmt.Sprintf("Cannot find filepath %s ; err: %v\n", fpath, err))
+		} else if len(matches) != 1 {
+			panic(fmt.Sprintf("No msp directory filepath name matches: %s\n", fpath))
+		}
+		var dialOpts []grpc.DialOption
+		dialOpts = append(dialOpts, grpc.WithDefaultCallOptions(grpc.MaxCallSendMsgSize(MaxGrpcMsgSize),
+			grpc.MaxCallRecvMsgSize(MaxGrpcMsgSize)))
+		if AppConf.TlsEnabled {
+			creds, err := credentials.NewClientTLSFromFile(fmt.Sprintf("%s/tls/ca.crt", matches[0]), orderer.Host)
+			if err != nil {
+				panic(fmt.Sprintf("Error creating grpc tls client creds, serverAddr %s, err: %v", serverAddr, err))
+			}
+			dialOpts = append(dialOpts, grpc.WithTransportCredentials(creds))
+		} else {
+			dialOpts = append(dialOpts, grpc.WithInsecure())
+		}
+
+		ctx, _ := context.WithTimeout(context.Background(), ConnTimeout)
+		//defer cancel()
+
+		ordererConn, err := grpc.DialContext(ctx, serverAddr, dialOpts...)
 		if err != nil {
 			panic(fmt.Sprintf("Error connecting (grpc) to %s, err: %v", serverAddr, err))
 		}
+
+		client, err := ab.NewAtomicBroadcastClient(ordererConn).Broadcast(context.TODO())
+		if err != nil {
+			panic(fmt.Sprintf("Error creating broadcast client for orderer[%s] , err: %v", serverAddr, err))
+		}
+		for _, channel := range AppConf.Channels {
+			ordererClients[channel] = append(clients, newBroadcastClient(client, channel, signer))
+		}
+		Logger.Info("Starting Producer for orderer[%s], %v", serverAddr, time.Now())
 	}
-	defer func() {
-		_ = conn.Close()
-	}()
 
-	client, err := ab.NewAtomicBroadcastClient(conn).Broadcast(context.TODO())
-	if err != nil {
-		panic(fmt.Sprintf("Error creating Producer for ord[%s] , err: %v", ordererName, err))
+	return
+}
+
+func (e *OrdererTrafficEngine) GetAndAddTxId() (id uint64) {
+	e.txIdMutex.Lock()
+	defer e.txIdMutex.Unlock()
+	id = e.txId
+	e.txId++
+	return
+}
+
+func (e *OrdererTrafficEngine) TransactionProducer() error {
+	txId := e.GetAndAddTxId()
+
+	channelId := AppConf.Channels[txId%uint64(len(AppConf.Channels))]
+	client := e.ordererClients[channelId][txId%uint64(len(AppConf.ConnOrderers))]
+	if err := client.broadcast([]byte(strconv.FormatUint(txId, 10))); err != nil {
+		Logger.Error("failed to broadcast TxId [%d], err: %v", txId, err)
+		return err
 	}
-	time.Sleep(3 * time.Second)
-
-	Logger.Info("Starting Producer to send TXs to ord[%s] srvr=%s chID=%s, %v", ordererName, serverAddr, chanID, time.Now())
-
-	b := newBroadcastClient(client, chanID, e.signer)
-	time.Sleep(2 * time.Second)
-
-	_ = b.broadcast([]byte("100"))
-	err = b.getAck()
-	if err == nil {
-		Logger.Info("successfully broadcast TX %v", time.Now())
-	} else {
-		Logger.Error("failed to broadcast TX %v, err: %v", time.Now(), err)
+	if err := client.getAck(); err != nil {
+		Logger.Error("failed to broadcast TxId [%d], getAck err: %v", txId, err)
+		return err
 	}
+	Logger.Info("successfully broadcast TxId [%d] to channel [%s] orderer [%s]", txId, channelId,
+		AppConf.ConnOrderers[txId%uint64(len(AppConf.ConnOrderers))].Host)
+	return nil
 }
 
 func (e *OrdererTrafficEngine) StartConsumer(serverAddr, serverHost, channelId, cryptoPath string) {
