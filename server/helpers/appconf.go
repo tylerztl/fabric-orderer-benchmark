@@ -20,6 +20,7 @@ type Application struct {
 	Profile      string         `yaml:"profile"`
 	Channels     []string       `yaml:"channels"`
 	TlsEnabled   bool           `yaml:"tlsEnabled"`
+	ReqTimeout   int64          `yaml:"reqTimeout"`
 }
 
 type OrdererInfo struct {

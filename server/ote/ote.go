@@ -181,7 +181,7 @@ func (e *OrdererTrafficEngine) TransactionProducer() error {
 		delete(reqChans, txId)
 		Logger.Info("TxId [%d] successful write to block [%d] on channel [%s]", txId, blockNum, channelId)
 		return nil
-	case <-time.After(time.Second * 10):
+	case <-time.After(time.Second * time.Duration(AppConf.ReqTimeout)):
 		errStr := fmt.Sprintf("Timeout to broadcast TxId [%d] to channel [%s] orderer [%s]", txId, channelId,
 			AppConf.ConnOrderers[txId%uint64(len(AppConf.ConnOrderers))].Host)
 		Logger.Error(errStr)

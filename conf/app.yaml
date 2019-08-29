@@ -13,3 +13,4 @@ application:
   channels:
     - mychannel1
   tlsEnabled: true
+  reqTimeout: 120
