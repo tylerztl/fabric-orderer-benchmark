@@ -2,13 +2,15 @@ package ote
 
 import (
 	"fmt"
+	"math"
+	"strconv"
+
 	"github.com/golang/protobuf/proto"
 	"github.com/hyperledger/fabric/common/crypto"
 	cb "github.com/hyperledger/fabric/protos/common"
 	ab "github.com/hyperledger/fabric/protos/orderer"
 	"github.com/hyperledger/fabric/protos/utils"
-	"math"
-	"strconv"
+	"github.com/pkg/errors"
 )
 
 var (
@@ -20,7 +22,7 @@ var (
 type DeliverClient struct {
 	client ab.AtomicBroadcast_DeliverClient
 	chanID string
-	engine *OrdererTrafficEngine
+	signer crypto.LocalSigner
 }
 
 type BroadcastClient struct {
@@ -29,11 +31,11 @@ type BroadcastClient struct {
 	signer crypto.LocalSigner
 }
 
-func newDeliverClient(client ab.AtomicBroadcast_DeliverClient, chanID string, engine *OrdererTrafficEngine) *DeliverClient {
+func newDeliverClient(client ab.AtomicBroadcast_DeliverClient, chanID string, signer crypto.LocalSigner) *DeliverClient {
 	return &DeliverClient{
 		client: client,
 		chanID: chanID,
-		engine: engine,
+		signer: signer,
 	}
 }
 
@@ -51,7 +53,7 @@ func (d *DeliverClient) seekHelper(chanID string, start *ab.SeekPosition, stop *
 		Stop:     stop,
 		Behavior: ab.SeekInfo_BLOCK_UNTIL_READY,
 	}
-	env, err := utils.CreateSignedEnvelope(cb.HeaderType_DELIVER_SEEK_INFO, d.chanID, d.engine.signer, seekInfo, int32(0), uint64(0))
+	env, err := utils.CreateSignedEnvelope(cb.HeaderType_DELIVER_SEEK_INFO, d.chanID, d.signer, seekInfo, int32(0), uint64(0))
 	if err != nil {
 		panic(err)
 	}
@@ -103,10 +105,7 @@ func (d *DeliverClient) readUntilClose() {
 				}
 
 				Logger.Info("Seek block number:%d, payload:%d", t.Block.Header.Number, txId)
-				d.engine.txIdMutex.RLock()
-				txChan := d.engine.reqChans[txId]
-				d.engine.txIdMutex.RUnlock()
-				if txChan != nil {
+				if txChan := txPool.getChanByTxId(txId); txChan != nil {
 					txChan <- t.Block.Header.Number
 				}
 			}
@@ -117,9 +116,13 @@ func (d *DeliverClient) readUntilClose() {
 func (b *BroadcastClient) broadcast(transaction []byte) error {
 	env, err := utils.CreateSignedEnvelope(cb.HeaderType_MESSAGE, b.chanID, b.signer, &cb.ConfigValue{Value: transaction}, 0, 0)
 	if err != nil {
-		panic(err)
+		return err
 	}
-	return b.client.Send(env)
+
+	if err := b.client.Send(env); err != nil {
+		return errors.WithMessage(err, "could not send")
+	}
+	return b.getAck()
 }
 
 func (b *BroadcastClient) getAck() error {

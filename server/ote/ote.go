@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fabric-orderer-benchmark/server/helpers"
 	"fmt"
-	"go.uber.org/atomic"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -13,6 +12,7 @@ import (
 
 	"github.com/hyperledger/fabric/common/crypto"
 	"github.com/hyperledger/fabric/common/localmsp"
+	"go.uber.org/atomic"
 	//genesisconfig "github.com/hyperledger/fabric/common/tools/configtxgen/localconfig" // config for genesis.yaml
 	mspmgmt "github.com/hyperledger/fabric/msp/mgmt"
 	ordererConf "github.com/hyperledger/fabric/orderer/common/localconfig" // config, for the orderer.yaml
@@ -29,14 +29,45 @@ var (
 	AppConf        = helpers.GetAppConf().Conf
 )
 
+type TxPool struct {
+	reqChans map[uint64]chan uint64
+	mutex    *sync.RWMutex
+}
+
+func newTxPool() *TxPool {
+	return &TxPool{
+		make(map[uint64]chan uint64),
+		new(sync.RWMutex),
+	}
+}
+
+var txPool = newTxPool()
+
+func (t *TxPool) getChanByTxId(txId uint64) chan uint64 {
+	t.mutex.RLock()
+	defer t.mutex.RUnlock()
+	return t.reqChans[txId]
+}
+
+func (t *TxPool) deleteChan(txId uint64) {
+	t.mutex.Lock()
+	defer t.mutex.Unlock()
+	delete(t.reqChans, txId)
+}
+
+func (t *TxPool) addChan(txId uint64, c chan uint64) {
+	t.mutex.Lock()
+	defer t.mutex.Unlock()
+	t.reqChans[txId] = c
+}
+
 type OrdererTrafficEngine struct {
 	ordConf *ordererConf.TopLevel
 	//genConf        *genesisconfig.Profile
 	signer         crypto.LocalSigner
 	ordererClients map[string][]*BroadcastClient
+	clientMutex    *sync.Mutex
 	txId           *atomic.Uint64
-	txIdMutex      sync.RWMutex
-	reqChans       map[uint64]chan uint64
 }
 
 func NewOTE() *OrdererTrafficEngine {
@@ -72,12 +103,12 @@ func NewOTE() *OrdererTrafficEngine {
 	signer := localmsp.NewSigner()
 
 	engine := &OrdererTrafficEngine{
-		ordConf: ordConf,
+		ordConf,
 		//genConf,
-		signer:         signer,
-		ordererClients: initOrdererClients(signer),
-		txId:           atomic.NewUint64(0),
-		reqChans:       make(map[uint64]chan uint64),
+		signer,
+		initOrdererClients(signer),
+		new(sync.Mutex),
+		atomic.NewUint64(0),
 	}
 
 	var serverAddr string
@@ -148,31 +179,34 @@ func initOrdererClients(signer crypto.LocalSigner) (ordererClients map[string][]
 	return
 }
 
-func (e *OrdererTrafficEngine) TransactionProducer() error {
-	txId := e.txId.Inc()
-	txChan := make(chan uint64)
-	e.txIdMutex.Lock()
-	e.reqChans[txId] = txChan
-	e.txIdMutex.Unlock()
+func (e *OrdererTrafficEngine) SendTransaction(txId uint64, channelId string) error {
+	e.clientMutex.Lock()
+	defer e.clientMutex.Unlock()
 
-	channelId := AppConf.Channels[txId%uint64(len(AppConf.Channels))]
 	client := e.ordererClients[channelId][txId%uint64(len(AppConf.ConnOrderers))]
 	if err := client.broadcast([]byte(strconv.FormatUint(txId, 10))); err != nil {
 		Logger.Error("failed to broadcast TxId [%d], err: %v", txId, err)
 		return err
 	}
-	if err := client.getAck(); err != nil {
-		Logger.Error("failed to broadcast TxId [%d], getAck err: %v", txId, err)
-		return err
-	}
+
 	Logger.Info("successfully broadcast TxId [%d] to channel [%s] orderer [%s]", txId, channelId,
 		AppConf.ConnOrderers[txId%uint64(len(AppConf.ConnOrderers))].Host)
+	return nil
+}
+
+func (e *OrdererTrafficEngine) TransactionProducer() error {
+	txId := e.txId.Inc()
+	channelId := AppConf.Channels[txId%uint64(len(AppConf.Channels))]
+	if err := e.SendTransaction(txId, channelId); err != nil {
+		return err
+	}
+
+	txChan := make(chan uint64)
+	txPool.addChan(txId, txChan)
 
 	select {
 	case blockNum := <-txChan:
-		e.txIdMutex.Lock()
-		delete(e.reqChans, txId)
-		e.txIdMutex.Unlock()
+		txPool.deleteChan(txId)
 		Logger.Info("TxId [%d] successful write to block [%d] on channel [%s]", txId, blockNum, channelId)
 		return nil
 	case <-time.After(time.Second * time.Duration(AppConf.ReqTimeout)):
@@ -208,7 +242,7 @@ func (e *OrdererTrafficEngine) StartConsumer(serverAddr, serverHost, channelId, 
 	if err != nil {
 		panic(fmt.Sprintf("Error create deliver client on grpc connection to %s, err: %v", serverAddr, err))
 	}
-	s := newDeliverClient(client, channelId, e)
+	s := newDeliverClient(client, channelId, e.signer)
 	if err = s.seekNewest(); err != nil {
 		panic(fmt.Sprintf("Error seek newest block from serverAddr=%s channelID=%s; err: %v", serverAddr, channelId, err))
 	}

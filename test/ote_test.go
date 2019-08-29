@@ -37,6 +37,7 @@ func syncSendTransaction(c pb.OteClient) (pb.StatusCode, error) {
 		return pb.StatusCode_FAILED, err
 	} else {
 		producersWG.Done()
+		fmt.Println("Status: ", r.Status)
 		return r.Status, nil
 	}
 }
@@ -53,7 +54,7 @@ func TestSyncSendTransaction(t *testing.T) {
 	defer conn.Close()
 	c := pb.NewOteClient(conn)
 
-	txNums := 10
+	txNums := 10000
 	producersWG.Add(txNums)
 	for i := 0; i < txNums; i++ {
 		go syncSendTransaction(c)
