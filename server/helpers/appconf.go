@@ -14,9 +14,11 @@ type AppConf struct {
 type Application struct {
 	LogPath      string         `yaml:"logPath"`
 	LogLevel     int8           `yaml:"logLevel"`
+	Local        bool           `yaml:"local"`
 	ConnOrderers []*OrdererInfo `yaml:"orderers"`
 	OrdererMsp   string         `yaml:"ordererMsp"`
 	Profile      string         `yaml:"profile"`
+	Channels     []string       `yaml:"channels"`
 	TlsEnabled   bool           `yaml:"tlsEnabled"`
 }
 

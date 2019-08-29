@@ -13,6 +13,6 @@ func NewOteService() *OteService {
 }
 
 func (c *OteService) SendTransaction(ctx context.Context, r *pb.SendTransactionRequest) (*pb.ServerStatus, error) {
-	getEngine().StartProducer("localhost:7050", "mychannel1", 0)
+	getEngine().StartProducer("localhost:7050", "mychannel1")
 	return &pb.ServerStatus{Status: pb.StatusCode_SUCCESS}, nil
 }

@@ -10,4 +10,6 @@ application:
       port: 7050
   ordererMsp: OrdererMSP
   profile: TwoOrgsOrdererGenesis
+  channels:
+    - mychannel1
   tlsEnabled: true

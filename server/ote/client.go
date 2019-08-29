@@ -3,7 +3,6 @@ package ote
 import (
 	"fmt"
 	"math"
-	"strings"
 
 	"github.com/hyperledger/fabric/common/crypto"
 	cb "github.com/hyperledger/fabric/protos/common"
@@ -29,7 +28,7 @@ type BroadcastClient struct {
 	signer crypto.LocalSigner
 }
 
-func NewDeliverClient(client ab.AtomicBroadcast_DeliverClient, chanID string, signer crypto.LocalSigner) *DeliverClient {
+func newDeliverClient(client ab.AtomicBroadcast_DeliverClient, chanID string, signer crypto.LocalSigner) *DeliverClient {
 	return &DeliverClient{
 		client: client,
 		chanID: chanID,
@@ -37,7 +36,7 @@ func NewDeliverClient(client ab.AtomicBroadcast_DeliverClient, chanID string, si
 	}
 }
 
-func NewBroadcastClient(client ab.AtomicBroadcast_BroadcastClient, chanID string, signer crypto.LocalSigner) *BroadcastClient {
+func newBroadcastClient(client ab.AtomicBroadcast_BroadcastClient, chanID string, signer crypto.LocalSigner) *BroadcastClient {
 	return &BroadcastClient{
 		client: client,
 		chanID: chanID,
@@ -46,11 +45,12 @@ func NewBroadcastClient(client ab.AtomicBroadcast_BroadcastClient, chanID string
 }
 
 func (d *DeliverClient) seekHelper(chanID string, start *ab.SeekPosition, stop *ab.SeekPosition) *cb.Envelope {
-	env, err := utils.CreateSignedEnvelope(cb.HeaderType_DELIVER_SEEK_INFO, d.chanID, d.signer, &ab.SeekInfo{
+	seekInfo := &ab.SeekInfo{
 		Start:    start,
 		Stop:     stop,
 		Behavior: ab.SeekInfo_BLOCK_UNTIL_READY,
-	}, 0, 0)
+	}
+	env, err := utils.CreateSignedEnvelope(cb.HeaderType_DELIVER_SEEK_INFO, d.chanID, d.signer, seekInfo, int32(0), uint64(0))
 	if err != nil {
 		panic(err)
 	}
@@ -65,7 +65,7 @@ func (d *DeliverClient) seekNewest() error {
 	return d.client.Send(d.seekHelper(d.chanID, newest, maxStop))
 }
 
-func (d *DeliverClient) seekSingle(blockNumber uint64) error {
+func (d *DeliverClient) seekSpecified(blockNumber uint64) error {
 	specific := &ab.SeekPosition{Type: &ab.SeekPosition_Specified{Specified: &ab.SeekSpecified{Number: blockNumber}}}
 	return d.client.Send(d.seekHelper(d.chanID, specific, specific))
 }
@@ -74,27 +74,22 @@ func (d *DeliverClient) readUntilClose() {
 	for {
 		msg, err := d.client.Recv()
 		if err != nil {
-			if !strings.Contains(err.Error(), "is closing") {
-				// print if we do not see the msg indicating graceful closing of the connection
-				logger.Error(fmt.Sprintf("Consumer  Recv error: %v", err))
-			}
-			return
+			panic(fmt.Sprintf("Consumer recv error: %v", err))
 		}
 		switch t := msg.Type.(type) {
 		case *ab.DeliverResponse_Status:
-			logger.Info(fmt.Sprintf("Got DeliverResponse_Status: %v", t))
-			return
+			Logger.Info(fmt.Sprintf("Got DeliverResponse_Status: %v", t))
 		case *ab.DeliverResponse_Block:
 			for _, envBytes := range t.Block.Data.Data {
 				envelope, _ := utils.GetEnvelopeFromBlock(envBytes)
 				payload, _ := utils.GetPayload(envelope)
-				logger.Info(fmt.Sprintf("Block.Data: %v", string(payload.Data)))
+				Logger.Info("Seek block number:%d, payload:%s", t.Block.Header.Number, string(payload.Data))
 			}
 		}
 	}
 }
 
-func (b *BroadcastClient) Broadcast(transaction []byte) error {
+func (b *BroadcastClient) broadcast(transaction []byte) error {
 	env, err := utils.CreateSignedEnvelope(cb.HeaderType_MESSAGE, b.chanID, b.signer, &cb.ConfigValue{Value: transaction}, 0, 0)
 	if err != nil {
 		panic(err)
@@ -102,7 +97,7 @@ func (b *BroadcastClient) Broadcast(transaction []byte) error {
 	return b.client.Send(env)
 }
 
-func (b *BroadcastClient) GetAck() error {
+func (b *BroadcastClient) getAck() error {
 	msg, err := b.client.Recv()
 	if err != nil {
 		return err

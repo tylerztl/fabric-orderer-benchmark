@@ -10,8 +10,6 @@ var hanlder = newHandler()
 
 func init() {
 	hanlder.engine = ote.NewOTE()
-
-	go hanlder.engine.StartConsumer("localhost:7050", "mychannel1", 0)
 }
 
 func newHandler() *Handler {
