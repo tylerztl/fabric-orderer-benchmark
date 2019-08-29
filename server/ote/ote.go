@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fabric-orderer-benchmark/server/helpers"
 	"fmt"
+	"go.uber.org/atomic"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -28,15 +29,14 @@ var (
 	AppConf        = helpers.GetAppConf().Conf
 )
 
-var reqChans = make(map[uint64]chan uint64)
-
 type OrdererTrafficEngine struct {
 	ordConf *ordererConf.TopLevel
 	//genConf        *genesisconfig.Profile
 	signer         crypto.LocalSigner
 	ordererClients map[string][]*BroadcastClient
-	txId           uint64
-	txIdMutex      *sync.Mutex
+	txId           *atomic.Uint64
+	txIdMutex      sync.RWMutex
+	reqChans       map[uint64]chan uint64
 }
 
 func NewOTE() *OrdererTrafficEngine {
@@ -72,12 +72,12 @@ func NewOTE() *OrdererTrafficEngine {
 	signer := localmsp.NewSigner()
 
 	engine := &OrdererTrafficEngine{
-		ordConf,
+		ordConf: ordConf,
 		//genConf,
-		signer,
-		initOrdererClients(signer),
-		0,
-		new(sync.Mutex),
+		signer:         signer,
+		ordererClients: initOrdererClients(signer),
+		txId:           atomic.NewUint64(0),
+		reqChans:       make(map[uint64]chan uint64),
 	}
 
 	var serverAddr string
@@ -148,16 +148,12 @@ func initOrdererClients(signer crypto.LocalSigner) (ordererClients map[string][]
 	return
 }
 
-func (e *OrdererTrafficEngine) GetAndAddTxId() (id uint64) {
-	e.txIdMutex.Lock()
-	defer e.txIdMutex.Unlock()
-	id = e.txId
-	e.txId++
-	return
-}
-
 func (e *OrdererTrafficEngine) TransactionProducer() error {
-	txId := e.GetAndAddTxId()
+	txId := e.txId.Inc()
+	txChan := make(chan uint64)
+	e.txIdMutex.Lock()
+	e.reqChans[txId] = txChan
+	e.txIdMutex.Unlock()
 
 	channelId := AppConf.Channels[txId%uint64(len(AppConf.Channels))]
 	client := e.ordererClients[channelId][txId%uint64(len(AppConf.ConnOrderers))]
@@ -172,12 +168,11 @@ func (e *OrdererTrafficEngine) TransactionProducer() error {
 	Logger.Info("successfully broadcast TxId [%d] to channel [%s] orderer [%s]", txId, channelId,
 		AppConf.ConnOrderers[txId%uint64(len(AppConf.ConnOrderers))].Host)
 
-	txChan := make(chan uint64)
-	reqChans[txId] = txChan
-
 	select {
 	case blockNum := <-txChan:
-		delete(reqChans, txId)
+		e.txIdMutex.Lock()
+		delete(e.reqChans, txId)
+		e.txIdMutex.Unlock()
 		Logger.Info("TxId [%d] successful write to block [%d] on channel [%s]", txId, blockNum, channelId)
 		return nil
 	case <-time.After(time.Second * time.Duration(AppConf.ReqTimeout)):
@@ -213,7 +208,7 @@ func (e *OrdererTrafficEngine) StartConsumer(serverAddr, serverHost, channelId, 
 	if err != nil {
 		panic(fmt.Sprintf("Error create deliver client on grpc connection to %s, err: %v", serverAddr, err))
 	}
-	s := newDeliverClient(client, channelId, e.signer)
+	s := newDeliverClient(client, channelId, e)
 	if err = s.seekNewest(); err != nil {
 		panic(fmt.Sprintf("Error seek newest block from serverAddr=%s channelID=%s; err: %v", serverAddr, channelId, err))
 	}
