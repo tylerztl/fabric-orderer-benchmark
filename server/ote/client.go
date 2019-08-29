@@ -20,7 +20,7 @@ var (
 type DeliverClient struct {
 	client ab.AtomicBroadcast_DeliverClient
 	chanID string
-	signer crypto.LocalSigner
+	engine *OrdererTrafficEngine
 }
 
 type BroadcastClient struct {
@@ -29,11 +29,11 @@ type BroadcastClient struct {
 	signer crypto.LocalSigner
 }
 
-func newDeliverClient(client ab.AtomicBroadcast_DeliverClient, chanID string, signer crypto.LocalSigner) *DeliverClient {
+func newDeliverClient(client ab.AtomicBroadcast_DeliverClient, chanID string, engine *OrdererTrafficEngine) *DeliverClient {
 	return &DeliverClient{
 		client: client,
 		chanID: chanID,
-		signer: signer,
+		engine: engine,
 	}
 }
 
@@ -51,7 +51,7 @@ func (d *DeliverClient) seekHelper(chanID string, start *ab.SeekPosition, stop *
 		Stop:     stop,
 		Behavior: ab.SeekInfo_BLOCK_UNTIL_READY,
 	}
-	env, err := utils.CreateSignedEnvelope(cb.HeaderType_DELIVER_SEEK_INFO, d.chanID, d.signer, seekInfo, int32(0), uint64(0))
+	env, err := utils.CreateSignedEnvelope(cb.HeaderType_DELIVER_SEEK_INFO, d.chanID, d.engine.signer, seekInfo, int32(0), uint64(0))
 	if err != nil {
 		panic(err)
 	}
@@ -103,7 +103,10 @@ func (d *DeliverClient) readUntilClose() {
 				}
 
 				Logger.Info("Seek block number:%d, payload:%d", t.Block.Header.Number, txId)
-				if txChan := reqChans[txId]; txChan != nil {
+				d.engine.txIdMutex.RLock()
+				txChan := d.engine.reqChans[txId]
+				d.engine.txIdMutex.RUnlock()
+				if txChan != nil {
 					txChan <- t.Block.Header.Number
 				}
 			}
