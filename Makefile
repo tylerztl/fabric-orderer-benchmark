@@ -6,20 +6,21 @@
 # This makefile defines the following targets
 #
 #   - protos - generate all protobuf artifacts based on .proto files
-#   - networkUp - start the fabric network
-#   - networkDown - teardown the fabric network and clean the containers and intermediate images
+#   - up - start the fabric network
+#   - clean - teardown the fabric network and clean the containers and intermediate images
+#   - cli - tart the fabric network cli
 #   - satrt - start the fabric-sdk-go server
 
 .PHONY: protos
 protos :
 	./scripts/compile_protos.sh
 
-.PHONY: networkUp
-networkUp :
+.PHONY: up
+up :
 	./scripts/start_network.sh -m up
 
-.PHONY: networkDown
-networkDown :
+.PHONY: clean
+clean :
 	./scripts/start_network.sh -m down
 
 .PHONY: cli
