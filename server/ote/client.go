@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"strconv"
+	"sync"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/hyperledger/fabric/common/crypto"
@@ -26,9 +27,11 @@ type DeliverClient struct {
 }
 
 type BroadcastClient struct {
-	client ab.AtomicBroadcast_BroadcastClient
-	chanID string
-	signer crypto.LocalSigner
+	client   ab.AtomicBroadcast_BroadcastClient
+	clientId uint32
+	mutex    sync.Mutex
+	chanID   string
+	signer   crypto.LocalSigner
 }
 
 func newDeliverClient(client ab.AtomicBroadcast_DeliverClient, chanID string, signer crypto.LocalSigner) *DeliverClient {
@@ -39,11 +42,12 @@ func newDeliverClient(client ab.AtomicBroadcast_DeliverClient, chanID string, si
 	}
 }
 
-func newBroadcastClient(client ab.AtomicBroadcast_BroadcastClient, chanID string, signer crypto.LocalSigner) *BroadcastClient {
+func newBroadcastClient(client ab.AtomicBroadcast_BroadcastClient, clientId uint32, chanID string, signer crypto.LocalSigner) *BroadcastClient {
 	return &BroadcastClient{
-		client: client,
-		chanID: chanID,
-		signer: signer,
+		client:   client,
+		clientId: clientId,
+		chanID:   chanID,
+		signer:   signer,
 	}
 }
 
@@ -83,32 +87,39 @@ func (d *DeliverClient) readUntilClose() {
 		case *ab.DeliverResponse_Status:
 			Logger.Info(fmt.Sprintf("Got DeliverResponse_Status: %v", t))
 		case *ab.DeliverResponse_Block:
-			if t.Block.Header.Number == 0 {
-				continue
-			}
-			for _, envBytes := range t.Block.Data.Data {
-				envelope, err := utils.GetEnvelopeFromBlock(envBytes)
-				if err != nil {
-					Logger.Error("Error GetEnvelopeFromBlock:", err)
-				}
-				payload, err := utils.GetPayload(envelope)
-				if err != nil {
-					Logger.Error("Error GetPayload:", err)
-				}
-				msg := cb.ConfigValue{}
-				if err := proto.Unmarshal(payload.Data, &msg); err != nil {
-					Logger.Error("Error proto unmarshal", err)
-				}
-				txId, err := strconv.ParseUint(string(msg.Value), 10, 64)
-				if err != nil {
-					Logger.Error("Error ParseUint:", err)
-				}
+			go transactionResponse(t.Block)
+		}
+	}
+}
 
-				Logger.Info("Seek block number:%d, payload:%d", t.Block.Header.Number, txId)
-				if txChan := txPool.getChanByTxId(txId); txChan != nil {
-					txChan <- t.Block.Header.Number
-				}
-			}
+func transactionResponse(block *cb.Block) {
+	if block.Header.Number == 0 {
+		return
+	}
+	for _, envBytes := range block.Data.Data {
+		envelope, err := utils.GetEnvelopeFromBlock(envBytes)
+		if err != nil {
+			Logger.Error("Error GetEnvelopeFromBlock:", err)
+		}
+		payload, err := utils.GetPayload(envelope)
+		if err != nil {
+			Logger.Error("Error GetPayload:", err)
+		}
+		msg := cb.ConfigValue{}
+		if err := proto.Unmarshal(payload.Data, &msg); err != nil {
+			Logger.Error("Error proto unmarshal", err)
+		}
+		txId, err := strconv.ParseUint(string(msg.Value), 10, 64)
+		if err != nil {
+			Logger.Error("Error ParseUint:", err)
+		}
+
+		Logger.Info("Seek block number:%d, payload:%d", block.Header.Number, txId)
+		//if txChan := txPool.getChanByTxId(txId); txChan != nil {
+		//	txChan <- block.Header.Number
+		//}
+		if txChan, ok := ReqChans.Load(txId); txChan != nil && ok {
+			txChan.(chan uint64) <- block.Header.Number
 		}
 	}
 }
@@ -118,6 +129,9 @@ func (b *BroadcastClient) broadcast(transaction []byte) error {
 	if err != nil {
 		return err
 	}
+
+	b.mutex.Lock()
+	defer b.mutex.Unlock()
 
 	if err := b.client.Send(env); err != nil {
 		return errors.WithMessage(err, "could not send")

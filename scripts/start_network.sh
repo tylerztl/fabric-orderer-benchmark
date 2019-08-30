@@ -63,9 +63,7 @@ function networkUp() {
 function networkDown() {
 	echo
     echo teardown the network and clean the containers and intermediate images
-	docker-compose down --volumes --remove-orphans
-	docker-compose -f docker-compose-cli.yaml down --volumes --remove-orphans
-	docker-compose -f docker-compose-benchmark.yaml down --volumes --remove-orphans
+	docker-compose -f docker-compose.yaml -f docker-compose-cli.yaml -f docker-compose-benchmark.yaml down --volumes --remove-orphans
 	if [ "$MODE" != "restart" ]; then
 	   dkcl
 	   dkrm

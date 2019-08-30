@@ -27,6 +27,7 @@ var (
 	ConnTimeout    = 30 * time.Second
 	Logger         = helpers.GetLogger()
 	AppConf        = helpers.GetAppConf().Conf
+	ReqChans       = new(sync.Map)
 )
 
 type TxPool struct {
@@ -64,10 +65,9 @@ func (t *TxPool) addChan(txId uint64, c chan uint64) {
 type OrdererTrafficEngine struct {
 	ordConf *ordererConf.TopLevel
 	//genConf        *genesisconfig.Profile
-	signer         crypto.LocalSigner
-	ordererClients map[string][]*BroadcastClient
-	clientMutex    *sync.Mutex
-	txId           *atomic.Uint64
+	signer  crypto.LocalSigner
+	clients map[string][][]*BroadcastClient // channels~orderers~clients
+	txId    *atomic.Uint64
 }
 
 func NewOTE() *OrdererTrafficEngine {
@@ -107,7 +107,6 @@ func NewOTE() *OrdererTrafficEngine {
 		//genConf,
 		signer,
 		initOrdererClients(signer),
-		new(sync.Mutex),
 		atomic.NewUint64(0),
 	}
 
@@ -127,86 +126,88 @@ func NewOTE() *OrdererTrafficEngine {
 	return engine
 }
 
-func initOrdererClients(signer crypto.LocalSigner) (ordererClients map[string][]*BroadcastClient) {
-	ordererClients = make(map[string][]*BroadcastClient)
-	var clients []*BroadcastClient
-	for _, orderer := range AppConf.ConnOrderers {
-		var serverAddr string
-		if AppConf.Local {
-			serverAddr = fmt.Sprintf("localhost:%d", orderer.Port)
-		} else {
-			serverAddr = fmt.Sprintf("%s:%d", orderer.Host, orderer.Port)
-		}
+func initOrdererClients(signer crypto.LocalSigner) (channelClients map[string][][]*BroadcastClient) {
+	if AppConf.Clients < 1 {
+		panic("Invalid parameter for clients number!")
+	}
 
-		fpath := helpers.GetCryptoConfigPath(fmt.Sprintf("ordererOrganizations/example.com/orderers/%s"+"*", orderer.Host))
-		matches, err := filepath.Glob(fpath)
-		if err != nil {
-			panic(fmt.Sprintf("Cannot find filepath %s ; err: %v\n", fpath, err))
-		} else if len(matches) != 1 {
-			panic(fmt.Sprintf("No msp directory filepath name matches: %s\n", fpath))
-		}
-		var dialOpts []grpc.DialOption
-		dialOpts = append(dialOpts, grpc.WithDefaultCallOptions(grpc.MaxCallSendMsgSize(MaxGrpcMsgSize),
-			grpc.MaxCallRecvMsgSize(MaxGrpcMsgSize)))
-		if AppConf.TlsEnabled {
-			creds, err := credentials.NewClientTLSFromFile(fmt.Sprintf("%s/tls/ca.crt", matches[0]), orderer.Host)
-			if err != nil {
-				panic(fmt.Sprintf("Error creating grpc tls client creds, serverAddr %s, err: %v", serverAddr, err))
+	channelClients = make(map[string][][]*BroadcastClient)
+	for _, channel := range AppConf.Channels {
+		ordererClients := make([][]*BroadcastClient, len(AppConf.ConnOrderers))
+		for i, orderer := range AppConf.ConnOrderers {
+			var serverAddr string
+			if AppConf.Local {
+				serverAddr = fmt.Sprintf("localhost:%d", orderer.Port)
+			} else {
+				serverAddr = fmt.Sprintf("%s:%d", orderer.Host, orderer.Port)
 			}
-			dialOpts = append(dialOpts, grpc.WithTransportCredentials(creds))
-		} else {
-			dialOpts = append(dialOpts, grpc.WithInsecure())
-		}
 
-		ctx, _ := context.WithTimeout(context.Background(), ConnTimeout)
-		//defer cancel()
+			fpath := helpers.GetCryptoConfigPath(fmt.Sprintf("ordererOrganizations/example.com/orderers/%s"+"*", orderer.Host))
+			matches, err := filepath.Glob(fpath)
+			if err != nil {
+				panic(fmt.Sprintf("Cannot find filepath %s ; err: %v\n", fpath, err))
+			} else if len(matches) != 1 {
+				panic(fmt.Sprintf("No msp directory filepath name matches: %s\n", fpath))
+			}
+			clients := make([]*BroadcastClient, AppConf.Clients)
+			for i := uint32(0); i < AppConf.Clients; i++ {
+				var dialOpts []grpc.DialOption
+				dialOpts = append(dialOpts, grpc.WithDefaultCallOptions(grpc.MaxCallSendMsgSize(MaxGrpcMsgSize),
+					grpc.MaxCallRecvMsgSize(MaxGrpcMsgSize)))
+				if AppConf.TlsEnabled {
+					creds, err := credentials.NewClientTLSFromFile(fmt.Sprintf("%s/tls/ca.crt", matches[0]), orderer.Host)
+					if err != nil {
+						panic(fmt.Sprintf("Error creating grpc tls client creds, serverAddr %s, err: %v", serverAddr, err))
+					}
+					dialOpts = append(dialOpts, grpc.WithTransportCredentials(creds))
+				} else {
+					dialOpts = append(dialOpts, grpc.WithInsecure())
+				}
 
-		ordererConn, err := grpc.DialContext(ctx, serverAddr, dialOpts...)
-		if err != nil {
-			panic(fmt.Sprintf("Error connecting (grpc) to %s, err: %v", serverAddr, err))
-		}
+				ctx, _ := context.WithTimeout(context.Background(), ConnTimeout)
+				//defer cancel()
 
-		client, err := ab.NewAtomicBroadcastClient(ordererConn).Broadcast(context.TODO())
-		if err != nil {
-			panic(fmt.Sprintf("Error creating broadcast client for orderer[%s] , err: %v", serverAddr, err))
+				ordererConn, err := grpc.DialContext(ctx, serverAddr, dialOpts...)
+				if err != nil {
+					panic(fmt.Sprintf("Error connecting (grpc) to %s, err: %v", serverAddr, err))
+				}
+
+				client, err := ab.NewAtomicBroadcastClient(ordererConn).Broadcast(context.TODO())
+				if err != nil {
+					panic(fmt.Sprintf("Error creating broadcast client for orderer[%s] , err: %v", serverAddr, err))
+				}
+
+				clients[i] = newBroadcastClient(client, i, channel, signer)
+				Logger.Info("Starting Producer client [%d] for orderer [%s] channel [%s], %v", i, serverAddr, channel, time.Now())
+			}
+			ordererClients[i] = clients
 		}
-		for _, channel := range AppConf.Channels {
-			ordererClients[channel] = append(clients, newBroadcastClient(client, channel, signer))
-		}
-		Logger.Info("Starting Producer for orderer[%s], %v", serverAddr, time.Now())
+		channelClients[channel] = ordererClients
 	}
 
 	return
 }
 
-func (e *OrdererTrafficEngine) SendTransaction(txId uint64, channelId string) error {
-	e.clientMutex.Lock()
-	defer e.clientMutex.Unlock()
+func (e *OrdererTrafficEngine) TransactionProducer() error {
+	txId := e.txId.Inc()
+	channelId := AppConf.Channels[txId%uint64(len(AppConf.Channels))]
+	client := e.clients[channelId][txId%uint64(len(AppConf.ConnOrderers))][txId%uint64(AppConf.Clients)]
 
-	client := e.ordererClients[channelId][txId%uint64(len(AppConf.ConnOrderers))]
 	if err := client.broadcast([]byte(strconv.FormatUint(txId, 10))); err != nil {
 		Logger.Error("failed to broadcast TxId [%d], err: %v", txId, err)
 		return err
 	}
-
-	Logger.Info("successfully broadcast TxId [%d] to channel [%s] orderer [%s]", txId, channelId,
-		AppConf.ConnOrderers[txId%uint64(len(AppConf.ConnOrderers))].Host)
-	return nil
-}
-
-func (e *OrdererTrafficEngine) TransactionProducer() error {
-	txId := e.txId.Inc()
-	channelId := AppConf.Channels[txId%uint64(len(AppConf.Channels))]
-	if err := e.SendTransaction(txId, channelId); err != nil {
-		return err
-	}
+	Logger.Info("client [%d] successfully broadcast TxId [%d] to channel [%s] orderer [%s]", client.clientId,
+		txId, channelId, AppConf.ConnOrderers[txId%uint64(len(AppConf.ConnOrderers))].Host)
 
 	txChan := make(chan uint64)
-	txPool.addChan(txId, txChan)
+	//txPool.addChan(txId, txChan)
+	ReqChans.Store(txId, txChan)
 
 	select {
 	case blockNum := <-txChan:
-		txPool.deleteChan(txId)
+		//txPool.deleteChan(txId)
+		ReqChans.Delete(txId)
 		Logger.Info("TxId [%d] successful write to block [%d] on channel [%s]", txId, blockNum, channelId)
 		return nil
 	case <-time.After(time.Second * time.Duration(AppConf.ReqTimeout)):

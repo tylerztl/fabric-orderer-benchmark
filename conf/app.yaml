@@ -4,12 +4,13 @@ application:
   logPath: logs
   logLevel: 7
   local: true
+  clients: 1
   orderers:
     - name: orderer
       host: orderer.example.com
       port: 7050
   ordererMsp: OrdererMSP
-  profile: TwoOrgsOrdererGenesis
+  profile: TwoOrgsOrdererGenesis #departed
   channels:
     - mychannel
   tlsEnabled: true
