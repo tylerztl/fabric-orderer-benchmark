@@ -203,7 +203,7 @@ func (e *OrdererTrafficEngine) TransactionProducer() error {
 		Logger.Error("failed to broadcast TxId [%d], err: %v", txId, err)
 		return err
 	}
-	Logger.Info("client [%d] successfully broadcast TxId [%d] to channel [%s] orderer [%s]", client.clientId,
+	Logger.Debug("client [%d] successfully broadcast TxId [%d] to channel [%s] orderer [%s]", client.clientId,
 		txId, channelId, AppConf.ConnOrderers[txId%uint64(len(AppConf.ConnOrderers))].Host)
 
 	select {

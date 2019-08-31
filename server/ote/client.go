@@ -114,7 +114,7 @@ func transactionResponse(block *cb.Block) {
 			Logger.Error("Error ParseUint:", err)
 		}
 
-		Logger.Info("Seek block number:%d, payload:%d", block.Header.Number, txId)
+		Logger.Debug("Seek block number:%d, payload:%d", block.Header.Number, txId)
 		//if txChan := txPool.getChanByTxId(txId); txChan != nil {
 		//	txChan <- block.Header.Number
 		//}
