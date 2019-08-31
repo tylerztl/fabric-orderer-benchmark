@@ -16,6 +16,7 @@ type Application struct {
 	LogLevel     int8           `yaml:"logLevel"`
 	Local        bool           `yaml:"local"`
 	Clients      uint32         `yaml:"clients"`
+	CPUs         int            `yaml:"cpus"`
 	ConnOrderers []*OrdererInfo `yaml:"orderers"`
 	OrdererMsp   string         `yaml:"ordererMsp"`
 	Profile      string         `yaml:"profile"`

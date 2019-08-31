@@ -133,10 +133,15 @@ func (b *BroadcastClient) broadcast(transaction []byte) error {
 	b.mutex.Lock()
 	defer b.mutex.Unlock()
 
+	done := make(chan error)
+	go func() {
+		done <- b.getAck()
+	}()
 	if err := b.client.Send(env); err != nil {
 		return errors.WithMessage(err, "could not send")
 	}
-	return b.getAck()
+
+	return <-done
 }
 
 func (b *BroadcastClient) getAck() error {

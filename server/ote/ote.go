@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"sync"
 	"time"
@@ -71,6 +72,8 @@ type OrdererTrafficEngine struct {
 }
 
 func NewOTE() *OrdererTrafficEngine {
+	runtime.GOMAXPROCS(AppConf.CPUs)
+
 	_ = os.Setenv("FABRIC_CFG_PATH", helpers.GetSampleConfigPath())
 	defer func() {
 		_ = os.Unsetenv("FABRIC_CFG_PATH")
@@ -190,6 +193,9 @@ func initOrdererClients(signer crypto.LocalSigner) (channelClients map[string][]
 
 func (e *OrdererTrafficEngine) TransactionProducer() error {
 	txId := e.txId.Inc()
+	txChan := make(chan uint64)
+	//txPool.addChan(txId, txChan)
+	ReqChans.Store(txId, txChan)
 	channelId := AppConf.Channels[txId%uint64(len(AppConf.Channels))]
 	client := e.clients[channelId][txId%uint64(len(AppConf.ConnOrderers))][txId%uint64(AppConf.Clients)]
 
@@ -199,10 +205,6 @@ func (e *OrdererTrafficEngine) TransactionProducer() error {
 	}
 	Logger.Info("client [%d] successfully broadcast TxId [%d] to channel [%s] orderer [%s]", client.clientId,
 		txId, channelId, AppConf.ConnOrderers[txId%uint64(len(AppConf.ConnOrderers))].Host)
-
-	txChan := make(chan uint64)
-	//txPool.addChan(txId, txChan)
-	ReqChans.Store(txId, txChan)
 
 	select {
 	case blockNum := <-txChan:

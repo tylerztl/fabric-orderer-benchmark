@@ -1,6 +1,6 @@
 {
   "total": 10000,
-  "concurrency": 100,
+  "concurrency": 200,
   "connections": 1,
   "host": "0.0.0.0:8080",
   "proto": "../protos/ote.proto",
@@ -12,7 +12,7 @@
   },
   "binary": false,
   "insecure": true,
-  "CPUs": 4,
+  "CPUs": 2,
   "output": "pretty.html",
   "format": "html",
   "name": "Fabric orderer performance test"
