@@ -10,6 +10,8 @@ option go_package = "fabric-orderer-benchmark/protos";
 
 package protos;
 
+import "google/api/annotations.proto";
+
 enum StatusCode {
     SUCCESS = 0;
     FAILED = 1;
@@ -24,5 +26,9 @@ message SendTransactionRequest {
 
 // Interface exported by the server.
 service Ote {
-    rpc SendTransaction (SendTransactionRequest) returns (ResponseStatus) {}
+    rpc SendTransaction (SendTransactionRequest) returns (ResponseStatus) {
+        option (google.api.http) = {
+            get: "/v1/transaction"
+        };
+    }
 }

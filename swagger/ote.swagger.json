@@ -1,0 +1,53 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "ote.proto",
+    "version": "version not set"
+  },
+  "schemes": [
+    "http",
+    "https"
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/v1/transaction": {
+      "get": {
+        "operationId": "SendTransaction",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/protosResponseStatus"
+            }
+          }
+        },
+        "tags": [
+          "Ote"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "protosResponseStatus": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "$ref": "#/definitions/protosStatusCode"
+        }
+      }
+    },
+    "protosStatusCode": {
+      "type": "string",
+      "enum": [
+        "SUCCESS",
+        "FAILED"
+      ],
+      "default": "SUCCESS"
+    }
+  }
+}
