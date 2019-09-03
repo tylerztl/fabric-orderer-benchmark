@@ -3,7 +3,7 @@ This Orderer Traffic Engine (OTE) tool tests the operation of a
 hyperledger fabric ordering service.
 
 ### Architecture
-![ote](./OTE.png)
+![ote](https://github.com/BeDreamCoder/fabric-orderer-benchmark/blob/master/OTE.png)
 
 ### Prerequisites
 - Go 1.10+ installation or later
