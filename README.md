@@ -2,6 +2,9 @@
 This Orderer Traffic Engine (OTE) tool tests the operation of a
 hyperledger fabric ordering service.
 
+### Architecture
+![ote](./OTE.png)
+
 ### Prerequisites
 - Go 1.10+ installation or later
 - GOPATH environment variable is set correctly
@@ -37,8 +40,6 @@ make benchmark
 ```
 cd test
 ```
-
-
 
 ### ghz 
 Simple [gRPC](http://grpc.io/) benchmarking and load testing tool inspired by [hey](https://github.com/rakyll/hey/) and [grpcurl](https://github.com/fullstorydev/grpcurl).
