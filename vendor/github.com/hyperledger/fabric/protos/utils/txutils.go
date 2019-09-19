@@ -81,6 +81,7 @@ func CreateSignedEnvelopeWithTLSBinding(txType common.HeaderType, channelID stri
 			return nil, err
 		}
 	}
+	SetTxID(payloadChannelHeader, payloadSignatureHeader)
 
 	data, err := proto.Marshal(dataMsg)
 	if err != nil {
