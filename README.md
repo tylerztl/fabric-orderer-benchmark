@@ -31,8 +31,8 @@ make cli
 make start
 ```
 4.2 docker start
+note：modify conf/app.yaml file "local" field to "false"
 ```
-docker build -t hyperledger/fabric-orderer-benchmark .
 make benchmark
 ```
 
