@@ -10,11 +10,11 @@ services:
     image: hyperledger/fabric-orderer:latest
     environment:
       - GODEBUG=netdns=go
+      - FABRIC_LOGGING_SPEC=INFO
       - ORDERER_GENERAL_PROFILE_ENABLED=false
-      - FABRIC_LOGGING_SPEC=DEBUG
       - ORDERER_GENERAL_LISTENADDRESS=0.0.0.0
-      - ORDERER_GENERAL_GENESISMETHOD=file
-      - ORDERER_GENERAL_GENESISFILE=/var/hyperledger/orderer/orderer.genesis.block
+      - ORDERER_GENERAL_BOOTSTRAPMETHOD=file
+      - ORDERER_GENERAL_BOOTSTRAPFILE=/var/hyperledger/orderer/orderer.genesis.block
       - ORDERER_GENERAL_LOCALMSPID=OrdererMSP
       - ORDERER_GENERAL_LOCALMSPDIR=/var/hyperledger/orderer/msp
       # enabled TLS
@@ -31,7 +31,5 @@ services:
       - ORDERER_SBFTLOCAL_PEERCOMMADDR=:6101
       - ORDERER_SBFTLOCAL_CERTFILE=/var/hyperledger/orderer/tls/server.crt
       - ORDERER_SBFTLOCAL_KEYFILE=/var/hyperledger/orderer/tls/server.key
-      - ORDERER_SBFTLOCAL_DATADIR=/tmp
     working_dir: /opt/gopath/src/github.com/hyperledger/fabric
     command: orderer
-

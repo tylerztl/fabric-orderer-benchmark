@@ -5,6 +5,12 @@
 
 version: '2'
 
+volumes:
+  orderer.example.com:
+  orderer2.example.com:
+  orderer3.example.com:
+  orderer4.example.com:
+
 networks:
   byfn:
 
@@ -14,7 +20,53 @@ services:
       file: docker-compose-base.yaml
       service: orderer.example.com
     volumes:
-      - ./genesis-solo.block:/var/hyperledger/orderer/orderer.genesis.block
+      - ./genesis.block:/var/hyperledger/orderer/orderer.genesis.block
+      - orderer.example.com:/var/hyperledger/production/orderer
     container_name: orderer.example.com
     networks:
       - byfn
+
+  orderer2.example.com:
+    extends:
+      file: peer-base.yaml
+      service: orderer-base
+    container_name: orderer2.example.com
+    networks:
+      - byfn
+    volumes:
+      - ./genesis.block:/var/hyperledger/orderer/orderer.genesis.block
+      - ../sampleconfig/crypto-config/ordererOrganizations/example.com/orderers/orderer2.example.com/msp:/var/hyperledger/orderer/msp
+      - ../sampleconfig/crypto-config/ordererOrganizations/example.com/orderers/orderer2.example.com/tls/:/var/hyperledger/orderer/tls
+      - orderer2.example.com:/var/hyperledger/production/orderer
+    ports:
+      - 8050:7050
+
+  orderer3.example.com:
+    extends:
+      file: peer-base.yaml
+      service: orderer-base
+    container_name: orderer3.example.com
+    networks:
+      - byfn
+    volumes:
+      - ./genesis.block:/var/hyperledger/orderer/orderer.genesis.block
+      - ../sampleconfig/crypto-config/ordererOrganizations/example.com/orderers/orderer3.example.com/msp:/var/hyperledger/orderer/msp
+      - ../sampleconfig/crypto-config/ordererOrganizations/example.com/orderers/orderer3.example.com/tls/:/var/hyperledger/orderer/tls
+      - orderer3.example.com:/var/hyperledger/production/orderer
+    ports:
+      - 9050:7050
+
+  orderer4.example.com:
+    extends:
+      file: peer-base.yaml
+      service: orderer-base
+    container_name: orderer4.example.com
+    networks:
+      - byfn
+    volumes:
+      - ./genesis.block:/var/hyperledger/orderer/orderer.genesis.block
+      - ../sampleconfig/crypto-config/ordererOrganizations/example.com/orderers/orderer4.example.com/msp:/var/hyperledger/orderer/msp
+      - ../sampleconfig/crypto-config/ordererOrganizations/example.com/orderers/orderer4.example.com/tls/:/var/hyperledger/orderer/tls
+      - orderer4.example.com:/var/hyperledger/production/orderer
+    ports:
+      - 10050:7050

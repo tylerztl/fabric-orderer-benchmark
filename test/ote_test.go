@@ -54,7 +54,7 @@ func TestSyncSendTransaction(t *testing.T) {
 	defer conn.Close()
 	c := pb.NewOteClient(conn)
 
-	txNums := 10000
+	txNums := 10
 	producersWG.Add(txNums)
 	for i := 0; i < txNums; i++ {
 		go syncSendTransaction(c)
